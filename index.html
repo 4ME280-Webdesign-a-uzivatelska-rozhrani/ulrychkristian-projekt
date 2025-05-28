@@ -2,10 +2,9 @@
 <html lang="cs">
 <head>
   <meta charset="UTF-8" />
-  <title>Cestovatelský deník (Alpine.js)</title>
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <title>Můj cestovní bucketlist</title>
   <style>
-    body { font-family: sans-serif; max-width:800px; margin:40px auto; padding:20px; background:#f9f9f9; }
+    body { font-family:sans-serif; max-width:800px; margin:40px auto; padding:20px; background:#f9f9f9; }
     h1,h2 { text-align:center; }
     .sekce { margin:30px 0; }
     .misto {
@@ -18,59 +17,137 @@
       padding:8px 16px; border-radius:4px; cursor:pointer;
     }
     button:hover { background:#005fa3; }
+    form { background:#fff; padding:20px; margin-bottom:30px; border-radius:8px; }
+    input, textarea { width:100%; margin-top:5px; margin-bottom:15px; padding:8px; box-sizing:border-box; }
+    label { display:block; font-weight: bold; }
   </style>
 </head>
-<body x-data="travelDiary()">
+<body>
+  <h1>🧭 Můj cestovní bucketlist</h1>
 
-  <h1>🧭 Můj cestovatelský deník</h1>
+  <form id="formular">
+    <h2>➕ Přidat nové místo</h2>
+    <label>Název místa:
+      <input type="text" id="misto" required>
+    </label>
+    <label>Datum:
+      <input type="date" id="datum" required>
+    </label>
+    <label>Popis:
+      <textarea id="popis" required></textarea>
+    </label>
+    <label>Obrázek (URL nebo použij např. https://picsum.photos/300/200):
+      <input type="text" id="obrazek" required>
+    </label>
+    <label>
+      <input type="checkbox" id="navstiveno"> Už jsem to místo navštívil
+    </label>
+    <button type="submit">Přidat místo</button>
+  </form>
 
   <div class="sekce">
     <h2>🕓 Chci navštívit</h2>
-    <template x-for="(place, idx) in places.filter(p => !p.navstiveno)" :key="idx">
-      <div class="misto">
-        <h3 x-text="place.misto"></h3>
-        <img :src="place.obrazek" :alt="place.misto">
-        <p><strong>Datum:</strong> <span x-text="place.datum"></span></p>
-        <p x-text="place.popis"></p>
-        <button @click="toggle(idx)">Už jsem tu byl/a</button>
-      </div>
-    </template>
-    <div x-show="places.filter(p => !p.navstiveno).length === 0">
-      Žádná nenavštívená místa.
-    </div>
+    <div id="nenavstiveno"></div>
   </div>
 
   <div class="sekce">
     <h2>✅ Navštíveno</h2>
-    <template x-for="(place, idx) in places.filter(p => p.navstiveno)" :key="idx">
-      <div class="misto">
-        <h3 x-text="place.misto"></h3>
-        <img :src="place.obrazek" :alt="place.misto">
-        <p><strong>Datum:</strong> <span x-text="place.datum"></span></p>
-        <p x-text="place.popis"></p>
-        <button @click="toggle(idx)">Znovu na seznam</button>
-      </div>
-    </template>
-    <div x-show="places.filter(p => p.navstiveno).length === 0">
-      Žádná navštívená místa.
-    </div>
+    <div id="navstiveno"></div>
   </div>
 
   <script>
-    function travelDiary() {
-      return {
-        places: [
-          { misto: "Barcelona, Španělsko", datum: "2024-07-10", popis: "Krásné město s plážemi a Gaudím.", obrazek: "https://picsum.photos/300/200?random=1", navstiveno: false },
-          { misto: "New York, USA",       datum: "2022-09-25", popis: "Mrakodrapy, Broadway a Central Park.", obrazek: "https://picsum.photos/300/200?random=2", navstiveno: true },
-          { misto: "Hanoj, Vietnam",       datum: "2025-02-15", popis: "Trhy, uličky a street food.", obrazek: "https://picsum.photos/300/200?random=3", navstiveno: false },
-          // ... nebo sem přidej svá další místa ...
-        ],
-        toggle(idx) {
-          this.places[idx].navstiveno = !this.places[idx].navstiveno;
-        }
+    const binId = "6836e3458a456b7966a66133";
+    const apiKey = "$2a$10$6.w3P.QfhbFQnbnWjZrsg.wsBOO9azO3iyMntL.YxupxTXtjFchvy";
+    let mista = [];
+
+    async function nactiData() {
+      try {
+        const res = await fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`, {
+          headers: { "X-Master-Key": apiKey }
+        });
+        const data = await res.json();
+        mista = data.record;
+        vykresli();
+      } catch (err) {
+        alert("Chyba při načítání dat.");
+        console.error(err);
       }
     }
-  </script>
 
+    function vykresli() {
+      const nen = document.getElementById("nenavstiveno");
+      const nav = document.getElementById("navstiveno");
+      nen.innerHTML = "";
+      nav.innerHTML = "";
+
+      mista.forEach((misto, index) => {
+        const div = document.createElement("div");
+        div.className = "misto";
+        div.innerHTML = `
+          <h3>${misto.misto}</h3>
+          <img src="${misto.obrazek}" alt="${misto.misto}">
+          <p><strong>Datum:</strong> ${misto.datum}</p>
+          <p>${misto.popis}</p>
+          <button onclick="prepnout(${index})">
+            ${misto.navstiveno ? "Zpět na seznam" : "Už jsem tu byl"}
+          </button>
+        `;
+        if (misto.navstiveno) {
+          nav.appendChild(div);
+        } else {
+          nen.appendChild(div);
+        }
+      });
+    }
+
+    async function prepnout(index) {
+      mista[index].navstiveno = !mista[index].navstiveno;
+      try {
+        await fetch(`https://api.jsonbin.io/v3/b/${binId}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Master-Key": apiKey
+          },
+          body: JSON.stringify(mista)
+        });
+        vykresli();
+      } catch (err) {
+        alert("Chyba při ukládání.");
+        console.error(err);
+      }
+    }
+
+    document.getElementById("formular").addEventListener("submit", async function (e) {
+      e.preventDefault();
+
+      const noveMisto = {
+        misto: document.getElementById("misto").value.trim(),
+        datum: document.getElementById("datum").value,
+        popis: document.getElementById("popis").value.trim(),
+        obrazek: document.getElementById("obrazek").value.trim(),
+        navstiveno: document.getElementById("navstiveno").checked
+      };
+
+      mista.push(noveMisto);
+      try {
+        await fetch(`https://api.jsonbin.io/v3/b/${binId}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Master-Key": apiKey
+          },
+          body: JSON.stringify(mista)
+        });
+        this.reset();
+        vykresli();
+      } catch (err) {
+        alert("Chyba při ukládání.");
+        console.error(err);
+      }
+    });
+
+    nactiData();
+  </script>
 </body>
 </html>
