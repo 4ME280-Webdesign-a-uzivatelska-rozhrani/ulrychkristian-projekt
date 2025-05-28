@@ -33,6 +33,20 @@
       max-width: 300px;
       border-radius: 5px;
     }
+
+    button {
+      margin-top: 10px;
+      padding: 8px 12px;
+      background: #007acc;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #005fa3;
+    }
   </style>
 </head>
 <body>
@@ -50,17 +64,31 @@
 
   <script>
     const binId = "6836d0118a456b7966a65a07";
-    const apiKey = ""; // Později doplníme
+    const apiKey = "$2a$10$6.w3P.QfhbFQnbnWjZrsg.wsBOO9azO3iyMntL.YxupxTXtjFchvy"; // ← nahraď svým X-Master-Key
+    let mista = [];
 
     async function nactiData() {
-      const res = await fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`);
-      const data = await res.json();
-      const mista = data.record;
+      try {
+        const res = await fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`, {
+          headers: { "X-Master-Key": apiKey }
+        });
+        const data = await res.json();
+        mista = data.record;
+        vykresli();
+      } catch (err) {
+        alert("Chyba při načítání dat.");
+        console.error(err);
+      }
+    }
 
-      const nenavstiveno = document.getElementById("Nenavštíveno");
-      const navstiveno = document.getElementById("Navštíveno");
+    function vykresli() {
+      const nenavstiveno = document.getElementById("nenavstiveno");
+      const navstiveno = document.getElementById("navstiveno");
 
-      mista.forEach(misto => {
+      nenavstiveno.innerHTML = "";
+      navstiveno.innerHTML = "";
+
+      mista.forEach((misto, index) => {
         const div = document.createElement("div");
         div.className = "misto";
         div.innerHTML = `
@@ -68,6 +96,9 @@
           <img src="${misto.obrazek}" alt="${misto.misto}">
           <p><strong>Datum:</strong> ${misto.datum}</p>
           <p>${misto.popis}</p>
+          <button onclick="prepnout(${index})">
+            ${misto.navstiveno ? "Znovu na seznam" : "Už jsem tu byl!"}
+          </button>
         `;
 
         if (misto.navstiveno) {
@@ -76,6 +107,25 @@
           nenavstiveno.appendChild(div);
         }
       });
+    }
+
+    async function prepnout(index) {
+      mista[index].navstiveno = !mista[index].navstiveno;
+      vykresli();
+
+      try {
+        await fetch(`https://api.jsonbin.io/v3/b/${binId}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Master-Key": apiKey
+          },
+          body: JSON.stringify(mista)
+        });
+      } catch (err) {
+        alert("Chyba při ukládání.");
+        console.error(err);
+      }
     }
 
     nactiData();
