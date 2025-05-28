@@ -115,7 +115,7 @@
       nenavstiveno.innerHTML = "";
       navstiveno.innerHTML = "";
 
-      mista.forEach((misto, index) => {
+      mista.forEach(misto => {
         const div = document.createElement("div");
         div.className = "misto";
         div.innerHTML = `
@@ -123,7 +123,7 @@
           <img src="${misto.obrazek}" alt="${misto.misto}">
           <p><strong>Datum:</strong> ${misto.datum}</p>
           <p>${misto.popis}</p>
-          <button onclick="prepnout(${index})">
+          <button onclick="prepnout(${misto.id})">
             ${misto.navstiveno ? "Znovu na seznam" : "Už jsem tu byl!"}
           </button>
         `;
@@ -136,7 +136,10 @@
       });
     }
 
-    async function prepnout(index) {
+    async function prepnout(id) {
+      const index = mista.findIndex(m => m.id === id);
+      if (index === -1) return;
+
       mista[index].navstiveno = !mista[index].navstiveno;
 
       try {
@@ -148,7 +151,7 @@
           },
           body: JSON.stringify(mista)
         });
-        nactiData(); // načti znovu aktuální stav
+        nactiData();
       } catch (err) {
         alert("Chyba při ukládání.");
         console.error(err);
@@ -159,6 +162,7 @@
       e.preventDefault();
 
       const noveMisto = {
+        id: Date.now(), // unikátní ID
         misto: document.getElementById("misto").value,
         datum: document.getElementById("datum").value,
         popis: document.getElementById("popis").value,
@@ -179,7 +183,7 @@
         });
         alert("Místo přidáno!");
         e.target.reset();
-        nactiData(); // Znovu načti – indexy se tím opraví
+        nactiData();
       } catch (err) {
         alert("Chyba při ukládání nového místa.");
         console.error(err);
