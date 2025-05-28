@@ -11,15 +11,8 @@
       padding: 20px;
       background: #f0f0f0;
     }
-
-    h1 {
-      text-align: center;
-    }
-
-    .sekce {
-      margin-top: 40px;
-    }
-
+    h1 { text-align: center; }
+    .sekce { margin-top: 40px; }
     .misto {
       background: white;
       padding: 20px;
@@ -27,13 +20,11 @@
       border-radius: 10px;
       box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     }
-
     img {
       width: 100%;
       max-width: 300px;
       border-radius: 5px;
     }
-
     button {
       margin-top: 10px;
       padding: 8px 12px;
@@ -43,10 +34,7 @@
       border-radius: 5px;
       cursor: pointer;
     }
-
-    button:hover {
-      background: #005fa3;
-    }
+    button:hover { background: #005fa3; }
   </style>
 </head>
 <body>
@@ -58,7 +46,7 @@
       <input type="text" id="misto" required>
     </label><br><br>
 
-    <label>Datum (např. 2024-07-10):<br>
+    <label>Datum:<br>
       <input type="date" id="datum" required>
     </label><br><br>
 
@@ -66,7 +54,7 @@
       <textarea id="popis" required></textarea>
     </label><br><br>
 
-    <label>Obrázek (URL nebo použij <code>https://picsum.photos/300/200</code>):<br>
+    <label>Obrázek (URL nebo https://picsum.photos/300/200):<br>
       <input type="text" id="obrazek" required>
     </label><br><br>
 
@@ -94,56 +82,51 @@
     const apiKey = "$2a$10$6.w3P.QfhbFQnbnWjZrsg.wsBOO9azO3iyMntL.YxupxTXtjFchvy";
     let mista = [];
 
+    // 1) Načte data, převede navstiveno na boolean a vykreslí
     async function nactiData() {
       try {
         const res = await fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`, {
           headers: { "X-Master-Key": apiKey }
         });
-        const data = await res.json();
-        mista = data.record;
+        const json = await res.json();
+        mista = json.record.map(m => ({
+          ...m,
+          navstiveno: m.navstiveno === true || m.navstiveno === "true"
+        }));
         vykresli();
-      } catch (err) {
+      } catch (e) {
         alert("Chyba při načítání dat.");
-        console.error(err);
+        console.error(e);
       }
     }
 
+    // 2) Vykreslí obě sekce podle boolean navstiveno
     function vykresli() {
-      const nenavstiveno = document.getElementById("nenavstiveno");
-      const navstiveno = document.getElementById("navstiveno");
+      const nen = document.getElementById("nenavstiveno");
+      const nav = document.getElementById("navstiveno");
+      nen.innerHTML = "";
+      nav.innerHTML = "";
 
-      nenavstiveno.innerHTML = "";
-      navstiveno.innerHTML = "";
-
-      mista.forEach(misto => {
+      mista.forEach((m, i) => {
         const div = document.createElement("div");
         div.className = "misto";
         div.innerHTML = `
-          <h3>${misto.misto}</h3>
-          <img src="${misto.obrazek}" alt="${misto.misto}">
-          <p><strong>Datum:</strong> ${misto.datum}</p>
-          <p>${misto.popis}</p>
-          <button onclick="prepnout(${misto.id})">
-            ${misto.navstiveno === true || misto.navstiveno === "true" ? "Znovu na seznam" : "Už jsem tu byl!"}
+          <h3>${m.misto}</h3>
+          <img src="${m.obrazek}" alt="${m.misto}">
+          <p><strong>Datum:</strong> ${m.datum}</p>
+          <p>${m.popis}</p>
+          <button onclick="prepnout(${i})">
+            ${m.navstiveno ? "Znovu na seznam" : "Už jsem tu byl!"}
           </button>
         `;
-
-        // ❗ Tady je klíčová oprava
-        if (misto.navstiveno === true || misto.navstiveno === "true") {
-          navstiveno.appendChild(div);
-        } else {
-          nenavstiveno.appendChild(div);
-        }
+        if (m.navstiveno) nav.appendChild(div);
+        else nen.appendChild(div);
       });
     }
 
-    async function prepnout(id) {
-      const index = mista.findIndex(m => m.id === id);
-      if (index === -1) return;
-
-      const current = mista[index].navstiveno;
-      mista[index].navstiveno = current === true || current === "true" ? false : true;
-
+    // 3) Přepne stav, uloží a znovu načte
+    async function prepnout(i) {
+      mista[i].navstiveno = !mista[i].navstiveno;
       try {
         await fetch(`https://api.jsonbin.io/v3/b/${binId}`, {
           method: "PUT",
@@ -154,26 +137,23 @@
           body: JSON.stringify(mista)
         });
         nactiData();
-      } catch (err) {
-        alert("Chyba při ukládání.");
-        console.error(err);
+      } catch (e) {
+        alert("Chyba při ukládání změn.");
+        console.error(e);
       }
     }
 
-    document.getElementById("formular").addEventListener("submit", async function (e) {
+    // 4) Přidání nového místa: uloží a znovu načte
+    document.getElementById("formular").addEventListener("submit", async function(e) {
       e.preventDefault();
-
-      const noveMisto = {
-        id: Date.now(),
-        misto: document.getElementById("misto").value,
-        datum: document.getElementById("datum").value,
-        popis: document.getElementById("popis").value,
-        obrazek: document.getElementById("obrazek").value,
-        navstiveno: document.getElementById("navstiveno").checked
+      const nove = {
+        misto: this.misto.value,
+        datum: this.datum.value,
+        popis: this.popis.value,
+        obrazek: this.obrazek.value,
+        navstiveno: this.navstiveno.checked
       };
-
-      mista.push(noveMisto);
-
+      mista.push(nove);
       try {
         await fetch(`https://api.jsonbin.io/v3/b/${binId}`, {
           method: "PUT",
@@ -184,14 +164,15 @@
           body: JSON.stringify(mista)
         });
         alert("Místo přidáno!");
-        e.target.reset();
+        this.reset();
         nactiData();
-      } catch (err) {
+      } catch (e) {
         alert("Chyba při ukládání nového místa.");
-        console.error(err);
+        console.error(e);
       }
     });
 
+    // start
     nactiData();
   </script>
 </body>
