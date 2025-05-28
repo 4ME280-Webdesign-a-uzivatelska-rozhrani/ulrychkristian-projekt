@@ -53,18 +53,162 @@
     <div id="planned"></div>
   </div>
 
-<!-- Skript zůstává stejný, pouze do funkce zobrazDenik() přidáme filtr podle vyhledávacího dotazu -->
-<script>
-  // ... zbytek kódu zůstává, pouze v zobrazDenik() přidáme:
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    const BIN_ID = "6836e9068960c979a5a21f76";
+    const MASTER_KEY = "$2a$10$6.w3P.QfhbFQnbnWjZrsg.wsBOO9azO3iyMntL.YxupxTXtjFchvy";
+    const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+    let entries = [];
 
-  const selectedYear = document.getElementById("rok-filter").value;
-  const searchQuery = document.getElementById("search-filter")?.value?.toLowerCase() || "";
+    const map = L.map('map').setView([48.8566, 2.3522], 4);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap',
+      maxZoom: 18
+    }).addTo(map);
 
-  // ... uvnitř forEach:
-  if (
-    searchQuery &&
-    ![entry.mesto, entry.popis, entry.zaznam].some(field => field?.toLowerCase().includes(searchQuery))
-  ) return;
-</script>
+    function zobrazDenik() {
+      const visitedContainer = document.getElementById("visited");
+      const plannedContainer = document.getElementById("planned");
+      const selectedYear = document.getElementById("rok-filter").value;
+      const searchQuery = document.getElementById("search-filter")?.value?.toLowerCase() || "";
+
+      visitedContainer.innerHTML = "";
+      plannedContainer.innerHTML = "";
+      map.eachLayer(layer => { if (layer instanceof L.Marker) map.removeLayer(layer); });
+
+      entries.forEach((entry, index) => {
+        const entryYear = entry.datum?.substring(0, 4);
+        if (selectedYear && selectedYear !== entryYear) return;
+
+        if (
+          searchQuery &&
+          ![entry.mesto, entry.popis, entry.zaznam].some(field => field?.toLowerCase().includes(searchQuery))
+        ) return;
+
+        const div = document.createElement("div");
+        div.className = "destination" + (!entry.navstiveno ? " planned" : "");
+
+        if (entry.editing) {
+          div.innerHTML = `
+            <input type="text" value="${entry.mesto}" onchange="entries[${index}].mesto = this.value" />
+            <input type="date" value="${entry.datum}" onchange="entries[${index}].datum = this.value" />
+            <input type="text" value="${entry.lokace}" onchange="entries[${index}].lokace = this.value" />
+            <textarea onchange="entries[${index}].popis = this.value">${entry.popis}</textarea>
+            <input type="url" value="${entry.obrazek}" onchange="entries[${index}].obrazek = this.value" />
+            <textarea onchange="entries[${index}].zaznam = this.value">${entry.zaznam || ""}</textarea>
+            <label><input type="checkbox" ${entry.navstiveno ? 'checked' : ''} onchange="entries[${index}].navstiveno = this.checked; ulozDoBin();"> Navštíveno</label>
+            <button onclick="ulozitZmenu(${index})">💾 Uložit změny</button>
+            <button onclick="zrusitEditaci(${index})">Zrušit</button>
+          `;
+        } else {
+          div.innerHTML = `
+            <h2>${entry.mesto} ${entry.navstiveno ? '[NAVŠTÍVENO]' : '[PLÁNUJI]'}</h2>
+            <p><strong>Datum:</strong> ${entry.datum}</p>
+            <p><strong>Místa:</strong> ${entry.lokace}</p>
+            <p><strong>Popis:</strong> ${entry.popis}</p>
+            <img src="${entry.obrazek}" alt="${entry.mesto}" />
+            <p><strong>Záznam:</strong> ${entry.zaznam || "---"}</p>
+            <button onclick="editovat(${index})">✏️ Upravit</button>
+            <button onclick="smazat(${index})">🗑️ Smazat</button>
+          `;
+          if (entry.lat && entry.lng) {
+            L.marker([entry.lat, entry.lng]).addTo(map)
+              .bindPopup(`<strong>${entry.mesto}</strong><br>${entry.lokace}`);
+          }
+        }
+
+        (entry.navstiveno ? visitedContainer : plannedContainer).appendChild(div);
+      });
+    }
+
+    function naplnitRoky() {
+      const select = document.getElementById("rok-filter");
+      const roky = [...new Set(entries.map(e => e.datum?.substring(0, 4)).filter(Boolean))].sort();
+      roky.forEach(rok => {
+        const opt = document.createElement("option");
+        opt.value = rok;
+        opt.textContent = rok;
+        select.appendChild(opt);
+      });
+    }
+
+    function ulozitZmenu(index) {
+      entries[index].editing = false;
+      ulozDoBin();
+    }
+
+    function zrusitEditaci(index) {
+      entries[index].editing = false;
+      zobrazDenik();
+    }
+
+    function editovat(index) {
+      entries[index].editing = true;
+      zobrazDenik();
+    }
+
+    function smazat(index) {
+      if (confirm("Opravdu chcete smazat tuto lokaci?")) {
+        entries.splice(index, 1);
+        ulozDoBin();
+      }
+    }
+
+    function ulozDoBin() {
+      fetch(API_URL, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Master-Key": MASTER_KEY
+        },
+        body: JSON.stringify(entries)
+      }).then(() => {
+        zobrazDenik();
+      }).catch(err => alert("Chyba při ukládání."));
+    }
+
+    function pridatNovouLokaci() {
+      const mesto = document.getElementById("new-mesto").value;
+      const datum = document.getElementById("new-datum").value;
+      const lokace = document.getElementById("new-lokace").value;
+      const popis = document.getElementById("new-popis").value;
+      const obrazek = document.getElementById("new-obrazek").value;
+      const zaznam = document.getElementById("new-zaznam").value;
+      const navstiveno = document.getElementById("new-navstiveno").checked;
+
+      if (!mesto || !datum || !lokace || !popis || !obrazek) {
+        alert("Vyplň všechna povinná pole.");
+        return;
+      }
+
+      const query = encodeURIComponent(mesto);
+      fetch(`https://nominatim.openstreetmap.org/search?q=${query}&format=json`)
+        .then(res => res.json())
+        .then(results => {
+          if (!results.length) {
+            alert("Místo nenalezeno.");
+            return;
+          }
+
+          const { lat, lon } = results[0];
+          const nova = { mesto, datum, lokace, popis, obrazek, zaznam, navstiveno, lat: parseFloat(lat), lng: parseFloat(lon) };
+          entries.push(nova);
+          ulozDoBin();
+        })
+        .catch(err => {
+          console.error(err);
+          alert("Chyba při geokódování.");
+        });
+    }
+
+    fetch(API_URL, { headers: { "X-Master-Key": MASTER_KEY } })
+      .then(res => res.json())
+      .then(data => {
+        entries = data.record.map(e => ({ ...e, editing: false }));
+        naplnitRoky();
+        zobrazDenik();
+      })
+      .catch(err => console.error(err));
+  </script>
 </body>
 </html>
