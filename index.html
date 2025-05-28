@@ -167,24 +167,27 @@
       });
     }
 
-    async function prepnout(index) {
-      mista[index].navstiveno = !mista[index].navstiveno;
-      vykresli();
+  async function prepnout(index) {
+  mista[index].navstiveno = !mista[index].navstiveno;
 
-      try {
-        await fetch(`https://api.jsonbin.io/v3/b/${binId}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Master-Key": apiKey
-          },
-          body: JSON.stringify(mista)
-        });
-      } catch (err) {
-        alert("Chyba při ukládání.");
-        console.error(err);
-      }
-    }
+  try {
+    await fetch(`https://api.jsonbin.io/v3/b/${binId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Master-Key": apiKey
+      },
+      body: JSON.stringify(mista)
+    });
+
+    // Znovu načti data z API, aby se UI neseklo na špatných indexech
+    nactiData();
+  } catch (err) {
+    alert("Chyba při ukládání.");
+    console.error(err);
+  }
+}
+
 
     nactiData();
   </script>
