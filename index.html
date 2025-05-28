@@ -51,34 +51,34 @@
 </head>
 <body>
   <h1>🧭 Můj cestovatelský deník</h1>
-<h2>➕ Přidat nové místo</h2>
-<form id="formular">
-  <label>Název místa:<br>
-    <input type="text" id="misto" required>
-  </label><br><br>
 
-  <label>Datum (např. 2024-07-10):<br>
-    <input type="date" id="datum" required>
-  </label><br><br>
+  <h2>➕ Přidat nové místo</h2>
+  <form id="formular">
+    <label>Název místa:<br>
+      <input type="text" id="misto" required>
+    </label><br><br>
 
-  <label>Popis:<br>
-    <textarea id="popis" required></textarea>
-  </label><br><br>
+    <label>Datum (např. 2024-07-10):<br>
+      <input type="date" id="datum" required>
+    </label><br><br>
 
-  <label>Obrázek (URL nebo použij <code>https://picsum.photos/300/200</code>):<br>
-    <input type="text" id="obrazek" required>
-  </label><br><br>
+    <label>Popis:<br>
+      <textarea id="popis" required></textarea>
+    </label><br><br>
 
-  <label>
-    <input type="checkbox" id="navstiveno">
-    Už jsem to místo navštívil
-  </label><br><br>
+    <label>Obrázek (URL nebo použij <code>https://picsum.photos/300/200</code>):<br>
+      <input type="text" id="obrazek" required>
+    </label><br><br>
 
-  <button type="submit">Přidat místo</button>
-</form>
-<hr>
+    <label>
+      <input type="checkbox" id="navstiveno">
+      Už jsem to místo navštívil
+    </label><br><br>
 
-  
+    <button type="submit">Přidat místo</button>
+  </form>
+  <hr>
+
   <div class="sekce">
     <h2>🕓 Chci navštívit</h2>
     <div id="nenavstiveno"></div>
@@ -90,39 +90,8 @@
   </div>
 
   <script>
-    document.getElementById("formular").addEventListener("submit", async function (e) {
-  e.preventDefault();
-
-  const noveMisto = {
-    misto: document.getElementById("misto").value,
-    datum: document.getElementById("datum").value,
-    popis: document.getElementById("popis").value,
-    obrazek: document.getElementById("obrazek").value,
-    navstiveno: document.getElementById("navstiveno").checked
-  };
-
-  mista.push(noveMisto);
-  vykresli();
-
-  try {
-    await fetch(`https://api.jsonbin.io/v3/b/${binId}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Master-Key": apiKey
-      },
-      body: JSON.stringify(mista)
-    });
-    alert("Místo přidáno!");
-    e.target.reset();
-  } catch (err) {
-    alert("Chyba při ukládání nového místa.");
-    console.error(err);
-  }
-});
-
     const binId = "6836d0118a456b7966a65a07";
-    const apiKey = "$2a$10$6.w3P.QfhbFQnbnWjZrsg.wsBOO9azO3iyMntL.YxupxTXtjFchvy"; // ← nahraď svým X-Master-Key
+    const apiKey = "$2a$10$6.w3P.QfhbFQnbnWjZrsg.wsBOO9azO3iyMntL.YxupxTXtjFchvy";
     let mista = [];
 
     async function nactiData() {
@@ -167,27 +136,55 @@
       });
     }
 
-  async function prepnout(index) {
-  mista[index].navstiveno = !mista[index].navstiveno;
+    async function prepnout(index) {
+      mista[index].navstiveno = !mista[index].navstiveno;
 
-  try {
-    await fetch(`https://api.jsonbin.io/v3/b/${binId}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Master-Key": apiKey
-      },
-      body: JSON.stringify(mista)
+      try {
+        await fetch(`https://api.jsonbin.io/v3/b/${binId}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Master-Key": apiKey
+          },
+          body: JSON.stringify(mista)
+        });
+        nactiData(); // načti znovu aktuální stav
+      } catch (err) {
+        alert("Chyba při ukládání.");
+        console.error(err);
+      }
+    }
+
+    document.getElementById("formular").addEventListener("submit", async function (e) {
+      e.preventDefault();
+
+      const noveMisto = {
+        misto: document.getElementById("misto").value,
+        datum: document.getElementById("datum").value,
+        popis: document.getElementById("popis").value,
+        obrazek: document.getElementById("obrazek").value,
+        navstiveno: document.getElementById("navstiveno").checked
+      };
+
+      mista.push(noveMisto);
+
+      try {
+        await fetch(`https://api.jsonbin.io/v3/b/${binId}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Master-Key": apiKey
+          },
+          body: JSON.stringify(mista)
+        });
+        alert("Místo přidáno!");
+        e.target.reset();
+        nactiData(); // Znovu načti – indexy se tím opraví
+      } catch (err) {
+        alert("Chyba při ukládání nového místa.");
+        console.error(err);
+      }
     });
-
-    // Znovu načti data z API, aby se UI neseklo na špatných indexech
-    nactiData();
-  } catch (err) {
-    alert("Chyba při ukládání.");
-    console.error(err);
-  }
-}
-
 
     nactiData();
   </script>
