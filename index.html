@@ -9,63 +9,76 @@
       max-width: 900px;
       margin: 40px auto;
       padding: 20px;
-      background: #f0f0f0;
+      background: #f9f9f9;
     }
-    h1 { text-align: center; }
-    .sekce { margin-top: 40px; }
+    h1, h2 { text-align: center; }
+    .sekce { margin: 30px 0; }
     .misto {
-      background: white;
-      padding: 20px;
-      margin-bottom: 20px;
-      border-radius: 10px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      background: #fff;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     }
     img {
+      max-width: 100%;
+      border-radius: 4px;
+      display: block;
+      margin: 10px 0;
+    }
+    form {
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      margin-bottom: 30px;
+    }
+    label { display: block; margin-bottom: 10px; }
+    input[type="text"], input[type="date"], textarea {
       width: 100%;
-      max-width: 300px;
-      border-radius: 5px;
+      padding: 6px;
+      margin-top: 4px;
+      box-sizing: border-box;
     }
     button {
-      margin-top: 10px;
-      padding: 8px 12px;
       background: #007acc;
-      color: white;
+      color: #fff;
       border: none;
-      border-radius: 5px;
+      padding: 10px 20px;
+      border-radius: 4px;
       cursor: pointer;
     }
     button:hover { background: #005fa3; }
   </style>
 </head>
 <body>
-  <h1>🧭 Můj cestovatelský deník</h1>
 
-  <h2>➕ Přidat nové místo</h2>
+  <h1>🧭 Cestovatelský deník</h1>
+
   <form id="formular">
-    <label>Název místa:<br>
+    <h2>➕ Přidat nové místo</h2>
+    <label>
+      Název místa:
       <input type="text" id="misto" required>
-    </label><br><br>
-
-    <label>Datum:<br>
+    </label>
+    <label>
+      Datum návštěvy:
       <input type="date" id="datum" required>
-    </label><br><br>
-
-    <label>Popis:<br>
-      <textarea id="popis" required></textarea>
-    </label><br><br>
-
-    <label>Obrázek (URL nebo https://picsum.photos/300/200):<br>
-      <input type="text" id="obrazek" required>
-    </label><br><br>
-
+    </label>
+    <label>
+      Popis:
+      <textarea id="popis" rows="3" required></textarea>
+    </label>
+    <label>
+      URL obrázku:
+      <input type="text" id="obrazek" placeholder="https://picsum.photos/300/200" required>
+    </label>
     <label>
       <input type="checkbox" id="navstiveno">
-      Už jsem to místo navštívil
-    </label><br><br>
-
-    <button type="submit">Přidat místo</button>
+      Už jsem tu byl/a
+    </label>
+    <button type="submit">Přidat</button>
   </form>
-  <hr>
 
   <div class="sekce">
     <h2>🕓 Chci navštívit</h2>
@@ -78,62 +91,86 @@
   </div>
 
   <script>
-    const binId = "6836d0118a456b7966a65a07";
+    const binId  = "6836d0118a456b7966a65a07";
     const apiKey = "$2a$10$6.w3P.QfhbFQnbnWjZrsg.wsBOO9azO3iyMntL.YxupxTXtjFchvy";
     let mista = [];
 
-    // 1) Načte data, převede navstiveno na boolean a vykreslí
-    async function nactiData() {
-  try {
-    const res = await fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`, {
-      headers: { "X-Master-Key": apiKey }
-    });
-    console.log("Fetch status:", res.status);
-    const json = await res.json();
-    console.log("Raw data.record:", json.record);
+    // 1) Načtení a normalizace dat
+    async function loadData() {
+      try {
+        const res  = await fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`, {
+          headers: { "X-Master-Key": apiKey }
+        });
+        if (!res.ok) throw new Error(`Status ${res.status}`);
+        const json = await res.json();
 
-    mista = json.record.map(m => ({
-      ...m,
-      navstiveno: m.navstiveno === true || m.navstiveno === "true"
-    }));
-    console.log("Normalized mista:", mista);
+        // Převedeme navstiveno vždy na boolean
+        mista = json.record.map(item => ({
+          ...item,
+          navstiveno: item.navstiveno === true || item.navstiveno === "true"
+        }));
 
-    vykresli();
-  } catch (e) {
-    console.error("Chyba v nactiData():", e);
-    alert("Chyba při načítání dat – koukni do konzole.");
-  }
-}
+        render();
+      } catch (err) {
+        console.error("Chyba při načítání:", err);
+        alert("Nepodařilo se načíst data. Zkontroluj konzoli.");
+      }
+    }
 
-    // 2) Vykreslí obě sekce podle boolean navstiveno
-    function vykresli() {
+    // 2) Vykreslení obou sekcí
+    function render() {
       const nen = document.getElementById("nenavstiveno");
       const nav = document.getElementById("navstiveno");
       nen.innerHTML = "";
       nav.innerHTML = "";
 
-      mista.forEach((m, i) => {
+      mista.forEach((item, idx) => {
         const div = document.createElement("div");
         div.className = "misto";
         div.innerHTML = `
-          <h3>${m.misto}</h3>
-          <img src="${m.obrazek}" alt="${m.misto}">
-          <p><strong>Datum:</strong> ${m.datum}</p>
-          <p>${m.popis}</p>
-          <button onclick="prepnout(${i})">
-            ${m.navstiveno ? "Znovu na seznam" : "Už jsem tu byl!"}
+          <h3>${item.misto}</h3>
+          <img src="${item.obrazek}" alt="${item.misto}">
+          <p><strong>Datum:</strong> ${item.datum}</p>
+          <p>${item.popis}</p>
+          <button data-index="${idx}">
+            ${item.navstiveno ? "Znovu na seznam" : "Už jsem tu byl/a"}
           </button>
         `;
-        if (m.navstiveno) nav.appendChild(div);
-        else nen.appendChild(div);
+        div.querySelector("button")
+           .addEventListener("click", () => toggleVisited(idx));
+
+        if (item.navstiveno) nav.appendChild(div);
+        else              nen.appendChild(div);
       });
     }
 
-    // 3) Přepne stav, uloží a znovu načte
-    async function prepnout(i) {
+    // 3) Přepnutí stavu a uložení
+    async function toggleVisited(i) {
       mista[i].navstiveno = !mista[i].navstiveno;
+      await saveData();
+      await loadData();
+    }
+
+    // 4) Přidání nového místa
+    document.getElementById("formular").addEventListener("submit", async e => {
+      e.preventDefault();
+      const newPlace = {
+        misto:      e.target.misto.value.trim(),
+        datum:      e.target.datum.value,
+        popis:      e.target.popis.value.trim(),
+        obrazek:    e.target.obrazek.value.trim(),
+        navstiveno: e.target.navstiveno.checked
+      };
+      mista.push(newPlace);
+      await saveData();
+      e.target.reset();
+      await loadData();
+    });
+
+    // 5) Uložení do JSONBin
+    async function saveData() {
       try {
-        await fetch(`https://api.jsonbin.io/v3/b/${binId}`, {
+        const res = await fetch(`https://api.jsonbin.io/v3/b/${binId}`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
@@ -141,44 +178,15 @@
           },
           body: JSON.stringify(mista)
         });
-        nactiData();
-      } catch (e) {
-        alert("Chyba při ukládání změn.");
-        console.error(e);
+        if (!res.ok) throw new Error(`Status ${res.status}`);
+      } catch (err) {
+        console.error("Chyba při ukládání:", err);
+        alert("Nepodařilo se uložit změny. Zkontroluj konzoli.");
       }
     }
 
-    // 4) Přidání nového místa: uloží a znovu načte
-    document.getElementById("formular").addEventListener("submit", async function(e) {
-      e.preventDefault();
-      const nove = {
-        misto: this.misto.value,
-        datum: this.datum.value,
-        popis: this.popis.value,
-        obrazek: this.obrazek.value,
-        navstiveno: this.navstiveno.checked
-      };
-      mista.push(nove);
-      try {
-        await fetch(`https://api.jsonbin.io/v3/b/${binId}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Master-Key": apiKey
-          },
-          body: JSON.stringify(mista)
-        });
-        alert("Místo přidáno!");
-        this.reset();
-        nactiData();
-      } catch (e) {
-        alert("Chyba při ukládání nového místa.");
-        console.error(e);
-      }
-    });
-
-    // start
-    nactiData();
+    // Zahájení
+    loadData();
   </script>
 </body>
 </html>
