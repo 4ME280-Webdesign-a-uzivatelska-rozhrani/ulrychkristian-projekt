@@ -2,99 +2,75 @@
 <html lang="cs">
 <head>
   <meta charset="UTF-8" />
-  <title>Cestovatelský deník (reload verze)</title>
+  <title>Cestovatelský deník (Alpine.js)</title>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <style>
-    body { font-family:sans-serif; max-width:800px; margin:40px auto; padding:20px; background:#f9f9f9; }
+    body { font-family: sans-serif; max-width:800px; margin:40px auto; padding:20px; background:#f9f9f9; }
     h1,h2 { text-align:center; }
-    form, .misto { background:#fff; padding:20px; margin-bottom:20px; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.1); }
-    label { display:block; margin-bottom:10px; }
-    input, textarea { width:100%; padding:8px; margin-top:4px; box-sizing:border-box; }
-    .sekce { margin-top:30px; }
-    .misto img { max-width:100%; display:block; margin:10px 0; border-radius:4px; }
-    button { background:#007acc; color:#fff; border:none; padding:8px 16px; border-radius:4px; cursor:pointer; }
+    .sekce { margin:30px 0; }
+    .misto {
+      background:#fff; padding:15px; margin-bottom:15px;
+      border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.1);
+    }
+    img { max-width:100%; border-radius:4px; display:block; margin:10px 0; }
+    button {
+      background:#007acc; color:#fff; border:none;
+      padding:8px 16px; border-radius:4px; cursor:pointer;
+    }
     button:hover { background:#005fa3; }
   </style>
 </head>
-<body>
+<body x-data="travelDiary()">
 
   <h1>🧭 Můj cestovatelský deník</h1>
 
-  <form id="form">
-    <h2>➕ Přidat nové místo</h2>
-    <label>Název místa:<input type="text" id="misto" required></label>
-    <label>Datum návštěvy:<input type="date" id="datum" required></label>
-    <label>Popis:<textarea id="popis" rows="3" required></textarea></label>
-    <label>URL obrázku:<input type="text" id="obrazek" placeholder="https://picsum.photos/300/200" required></label>
-    <label><input type="checkbox" id="navstiveno"> Už jsem tu byl/a</label>
-    <button type="submit">Přidat místo</button>
-  </form>
-
   <div class="sekce">
     <h2>🕓 Chci navštívit</h2>
-    <div id="nenavstiveno"></div>
+    <template x-for="(place, idx) in places.filter(p => !p.navstiveno)" :key="idx">
+      <div class="misto">
+        <h3 x-text="place.misto"></h3>
+        <img :src="place.obrazek" :alt="place.misto">
+        <p><strong>Datum:</strong> <span x-text="place.datum"></span></p>
+        <p x-text="place.popis"></p>
+        <button @click="toggle(idx)">Už jsem tu byl/a</button>
+      </div>
+    </template>
+    <div x-show="places.filter(p => !p.navstiveno).length === 0">
+      Žádná nenavštívená místa.
+    </div>
   </div>
+
   <div class="sekce">
     <h2>✅ Navštíveno</h2>
-    <div id="navstiveno"></div>
+    <template x-for="(place, idx) in places.filter(p => p.navstiveno)" :key="idx">
+      <div class="misto">
+        <h3 x-text="place.misto"></h3>
+        <img :src="place.obrazek" :alt="place.misto">
+        <p><strong>Datum:</strong> <span x-text="place.datum"></span></p>
+        <p x-text="place.popis"></p>
+        <button @click="toggle(idx)">Znovu na seznam</button>
+      </div>
+    </template>
+    <div x-show="places.filter(p => p.navstiveno).length === 0">
+      Žádná navštívená místa.
+    </div>
   </div>
 
   <script>
-    // Načteme data nebo začneme prázdným polem
-    let mista = JSON.parse(localStorage.getItem('mista') || '[]');
-
-    // Vykreslíme obě sekce
-    function render() {
-      const nen = document.getElementById('nenavstiveno');
-      const nav = document.getElementById('navstiveno');
-      nen.innerHTML = '';
-      nav.innerHTML = '';
-
-      mista.forEach((item, i) => {
-        const div = document.createElement('div');
-        div.className = 'misto';
-        div.innerHTML = `
-          <h3>${item.misto}</h3>
-          <img src="${item.obrazek}" alt="${item.misto}">
-          <p><strong>Datum:</strong> ${item.datum}</p>
-          <p>${item.popis}</p>
-        `;
-        const btn = document.createElement('button');
-        btn.textContent = item.navstiveno 
-          ? 'Znovu na seznam' 
-          : 'Už jsem tu byl/a';
-        btn.onclick = () => {
-          // přepneme stav, uložíme a reload
-          mista[i].navstiveno = !mista[i].navstiveno;
-          localStorage.setItem('mista', JSON.stringify(mista));
-          location.reload();
-        };
-        div.appendChild(btn);
-
-        if (item.navstiveno) {
-          nav.appendChild(div);
-        } else {
-          nen.appendChild(div);
+    function travelDiary() {
+      return {
+        places: [
+          { misto: "Barcelona, Španělsko", datum: "2024-07-10", popis: "Krásné město s plážemi a Gaudím.", obrazek: "https://picsum.photos/300/200?random=1", navstiveno: false },
+          { misto: "New York, USA",       datum: "2022-09-25", popis: "Mrakodrapy, Broadway a Central Park.", obrazek: "https://picsum.photos/300/200?random=2", navstiveno: true },
+          { misto: "Hanoj, Vietnam",       datum: "2025-02-15", popis: "Trhy, uličky a street food.", obrazek: "https://picsum.photos/300/200?random=3", navstiveno: false },
+          // ... nebo sem přidej svá další místa ...
+        ],
+        toggle(idx) {
+          this.places[idx].navstiveno = !this.places[idx].navstiveno;
         }
-      });
+      }
     }
-
-    // Obsluha formuláře pro přidání nového místa
-    document.getElementById('form').addEventListener('submit', e => {
-      e.preventDefault();
-      mista.push({
-        misto: document.getElementById('misto').value.trim(),
-        datum: document.getElementById('datum').value,
-        popis: document.getElementById('popis').value.trim(),
-        obrazek: document.getElementById('obrazek').value.trim(),
-        navstiveno: document.getElementById('navstiveno').checked
-      });
-      localStorage.setItem('mista', JSON.stringify(mista));
-      // reload, aby se nové místo objevilo ve správné sekci
-      location.reload();
-    });
-
-    // Konečné vykreslení
-    render();
   </script>
+
 </body>
 </html>
