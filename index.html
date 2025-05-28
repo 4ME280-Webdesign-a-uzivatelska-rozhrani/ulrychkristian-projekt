@@ -12,7 +12,7 @@
       padding: 1rem;
       background-color: #f9f9f9;
     }
-    .destination {
+    .destination, .new-location {
       background: #fff;
       padding: 1rem;
       margin-bottom: 1rem;
@@ -24,11 +24,10 @@
       border-radius: 8px;
       margin: 0.5rem 0;
     }
-    textarea {
+    textarea, input {
       width: 100%;
-      height: 80px;
-      margin-top: 0.5rem;
-      font-family: sans-serif;
+      margin: 0.3rem 0;
+      padding: 0.4rem;
     }
     button {
       margin-top: 0.5rem;
@@ -43,68 +42,120 @@
 </head>
 <body>
   <h1>Interaktivní cestovatelský deník</h1>
+
+  <!-- Nový formulář -->
+  <div class="new-location">
+    <h2>➕ Přidat novou lokaci</h2>
+    <input type="text" id="new-mesto" placeholder="Město" required />
+    <input type="date" id="new-datum" required />
+    <input type="text" id="new-lokace" placeholder="Navštívená místa" required />
+    <textarea id="new-popis" placeholder="Popis cesty" required></textarea>
+    <input type="url" id="new-obrazek" placeholder="URL obrázku" required />
+    <textarea id="new-zaznam" placeholder="Zápis/komentář (nepovinné)"></textarea>
+    <button onclick="pridatNovouLokaci()">💾 Přidat lokaci</button>
+  </div>
+
+  <!-- Výpis destinací -->
   <div id="diary"></div>
 
   <script>
     const BIN_ID = "6836e9068960c979a5a21f76";
     const MASTER_KEY = "$2a$10$6.w3P.QfhbFQnbnWjZrsg.wsBOO9azO3iyMntL.YxupxTXtjFchvy";
     const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+    let entries = [];
 
-    // Načti data z JSONBin
+    function zobrazDenik() {
+      const container = document.getElementById("diary");
+      container.innerHTML = ""; // smaž předchozí
+
+      entries.forEach((entry, index) => {
+        const div = document.createElement("div");
+        div.className = "destination";
+
+        div.innerHTML = `
+          <h2>${entry.mesto}</h2>
+          <p><strong>Datum:</strong> ${entry.datum}</p>
+          <p><strong>Místa:</strong> ${entry.lokace}</p>
+          <p><strong>Popis:</strong> ${entry.popis}</p>
+          <img src="${entry.obrazek}" alt="${entry.mesto}" />
+          <label for="zaznam-${index}">Zápis / komentář:</label>
+          <textarea id="zaznam-${index}">${entry.zaznam || ""}</textarea>
+          <button onclick="ulozitZaznam(${index})">💾 Uložit</button>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    // Načtení deníku
     fetch(API_URL, {
       headers: { "X-Master-Key": MASTER_KEY }
     })
       .then(res => res.json())
       .then(data => {
-        const entries = data.record;
-        const container = document.getElementById("diary");
-
-        entries.forEach((entry, index) => {
-          const div = document.createElement("div");
-          div.className = "destination";
-
-          div.innerHTML = `
-            <h2>${entry.mesto}</h2>
-            <p><strong>Datum:</strong> ${entry.datum}</p>
-            <p><strong>Místa:</strong> ${entry.lokace}</p>
-            <p><strong>Popis:</strong> ${entry.popis}</p>
-            <img src="${entry.obrazek}" alt="${entry.mesto}" />
-            <label for="zaznam-${index}">Zápis / komentář:</label>
-            <textarea id="zaznam-${index}">${entry.zaznam || ""}</textarea>
-            <button onclick="ulozitZaznam(${index})">💾 Uložit</button>
-          `;
-
-          container.appendChild(div);
-        });
-
-        // Uložení změn
-        window.ulozitZaznam = function(index) {
-          const textarea = document.getElementById(`zaznam-${index}`);
-          entries[index].zaznam = textarea.value;
-
-          fetch(API_URL, {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-              "X-Master-Key": MASTER_KEY,
-              "X-Bin-Name": "Travel Diary"
-            },
-            body: JSON.stringify(entries)
-          })
-          .then(res => res.json())
-          .then(() => {
-            alert("Záznam uložen.");
-          })
-          .catch(err => {
-            console.error(err);
-            alert("Chyba při ukládání.");
-          });
-        };
+        entries = data.record;
+        zobrazDenik();
       })
       .catch(err => {
         console.error(err);
         document.getElementById("diary").innerText = "Nepodařilo se načíst deník.";
       });
+
+    // Uložení záznamu
+    function ulozitZaznam(index) {
+      const textarea = document.getElementById(`zaznam-${index}`);
+      entries[index].zaznam = textarea.value;
+
+      fetch(API_URL, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Master-Key": MASTER_KEY
+        },
+        body: JSON.stringify(entries)
+      })
+      .then(() => alert("Záznam uložen."))
+      .catch(err => {
+        console.error(err);
+        alert("Chyba při ukládání.");
+      });
+    }
+
+    // Přidání nové lokace
+    function pridatNovouLokaci() {
+      const nova = {
+        mesto: document.getElementById("new-mesto").value,
+        datum: document.getElementById("new-datum").value,
+        lokace: document.getElementById("new-lokace").value,
+        popis: document.getElementById("new-popis").value,
+        obrazek: document.getElementById("new-obrazek").value,
+        zaznam: document.getElementById("new-zaznam").value
+      };
+
+      if (!nova.mesto || !nova.datum || !nova.lokace || !nova.popis || !nova.obrazek) {
+        alert("Vyplň prosím všechna povinná pole.");
+        return;
+      }
+
+      entries.push(nova); // přidej do pole
+
+      // Ulož zpět do JSONBin
+      fetch(API_URL, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Master-Key": MASTER_KEY
+        },
+        body: JSON.stringify(entries)
+      })
+      .then(() => {
+        alert("Nová lokalita byla přidána.");
+        zobrazDenik(); // aktualizuj výpis
+      })
+      .catch(err => {
+        console.error(err);
+        alert("Chyba při ukládání nové lokace.");
+      });
+    }
   </script>
 </body>
 </html>
