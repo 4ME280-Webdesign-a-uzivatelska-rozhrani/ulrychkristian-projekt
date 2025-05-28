@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <title>Cestovatelský deník</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #f0f0f0;
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    .sekce {
+      margin-top: 40px;
+    }
+
+    .misto {
+      background: white;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    img {
+      width: 100%;
+      max-width: 300px;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧭 Můj cestovatelský deník</h1>
+
+  <div class="sekce">
+    <h2>🕓 Chci navštívit</h2>
+    <div id="nenavstiveno"></div>
+  </div>
+
+  <div class="sekce">
+    <h2>✅ Navštíveno</h2>
+    <div id="navstiveno"></div>
+  </div>
+
+  <script>
+    const binId = "6836d0118a456b7966a65a07";
+    const apiKey = ""; // Později doplníme
+
+    async function nactiData() {
+      const res = await fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`);
+      const data = await res.json();
+      const mista = data.record;
+
+      const nenavstiveno = document.getElementById("Nenavštíveno");
+      const navstiveno = document.getElementById("Navštíveno");
+
+      mista.forEach(misto => {
+        const div = document.createElement("div");
+        div.className = "misto";
+        div.innerHTML = `
+          <h3>${misto.misto}</h3>
+          <img src="${misto.obrazek}" alt="${misto.misto}">
+          <p><strong>Datum:</strong> ${misto.datum}</p>
+          <p>${misto.popis}</p>
+        `;
+
+        if (misto.navstiveno) {
+          navstiveno.appendChild(div);
+        } else {
+          nenavstiveno.appendChild(div);
+        }
+      });
+    }
+
+    nactiData();
+  </script>
+</body>
+</html>
