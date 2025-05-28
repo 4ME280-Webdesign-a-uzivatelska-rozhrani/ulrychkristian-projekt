@@ -1,172 +1,169 @@
+
 <!DOCTYPE html>
 <html lang="cs">
 <head>
-  <meta charset="UTF-8" />
-  <title>Cestovatelský deník</title>
-  <style>
-    body {
-      font-family: sans-serif;
-      max-width: 900px;
-      margin: 40px auto;
-      padding: 20px;
-      background: #f9f9f9;
-    }
-    h1, h2 { text-align: center; }
-    form, .misto {
-      background: #fff;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-      margin-bottom: 20px;
-    }
-    label { display: block; margin-bottom: 10px; }
-    input[type="text"], input[type="date"], textarea {
-      width: 100%; padding: 6px; box-sizing: border-box;
-    }
-    .sekce { margin-top: 30px; }
-    .misto img {
-      max-width: 100%; border-radius: 4px; display: block; margin: 10px 0;
-    }
-    button {
-      background: #007acc; color: #fff;
-      border: none; padding: 8px 16px; border-radius: 4px;
-      cursor: pointer;
-    }
-    button:hover { background: #005fa3; }
-  </style>
+  <meta charset="UTF-8" />
+  <title>Cestovatelský deník</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #f9f9f9;
+    }
+    h1, h2 { text-align: center; }
+    form, .misto {
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+    label { display: block; margin-bottom: 10px; }
+    input[type="text"], input[type="date"], textarea {
+      width: 100%; padding: 6px; box-sizing: border-box;
+    }
+    .sekce { margin-top: 30px; }
+    .misto img {
+      max-width: 100%; border-radius: 4px; display: block; margin: 10px 0;
+    }
+    button {
+      background: #007acc; color: #fff;
+      border: none; padding: 8px 16px; border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover { background: #005fa3; }
+  </style>
 </head>
 <body>
 
-  <h1>🧭 Cestovatelský deník</h1>
+  <h1>🧭 Cestovatelský deník</h1>
 
-  <form id="formular">
-    <h2>➕ Přidat nové místo</h2>
-    <label>Název místa:
-      <input type="text" id="misto" required>
-    </label>
-    <label>Datum návštěvy:
-      <input type="date" id="datum" required>
-    </label>
-    <label>Popis:
-      <textarea id="popis" rows="3" required></textarea>
-    </label>
-    <label>URL obrázku:
-      <input type="text" id="obrazek" placeholder="https://picsum.photos/300/200" required>
-    </label>
-    <label>
-      <input type="checkbox" id="navstiveno">
-      Už jsem tu byl/a
-    </label>
-    <button type="submit">Přidat</button>
-  </form>
+  <form id="formular">
+    <h2>➕ Přidat nové místo</h2>
+    <label>Název místa:
+      <input type="text" id="misto" required>
+    </label>
+    <label>Datum návštěvy:
+      <input type="date" id="datum" required>
+    </label>
+    <label>Popis:
+      <textarea id="popis" rows="3" required></textarea>
+    </label>
+    <label>URL obrázku:
+      <input type="text" id="obrazek" placeholder="https://picsum.photos/300/200" required>
+    </label>
+    <label>
+      <input type="checkbox" id="navstiveno">
+      Už jsem tu byl/a
+    </label>
+    <button type="submit">Přidat</button>
+  </form>
 
-  <div class="sekce">
-    <h2>🕓 Chci navštívit</h2>
-    <div id="nenavstiveno"></div>
-  </div>
+  <div class="sekce">
+    <h2>🕓 Chci navštívit</h2>
+    <div id="nenavstiveno"></div>
+  </div>
 
-  <div class="sekce">
-    <h2>✅ Navštíveno</h2>
-    <div id="navstiveno"></div>
-  </div>
+  <div class="sekce">
+    <h2>✅ Navštíveno</h2>
+    <div id="navstiveno"></div>
+  </div>
 
-  <script>
-    const binId  = "6836d0118a456b7966a65a07";
-    const apiKey = "$2a$10$6.w3P.QfhbFQnbnWjZrsg.wsBOO9azO3iyMntL.YxupxTXtjFchvy";
-    let mista = [];
+  <script>
+    const binId  = "6836d0118a456b7966a65a07";
+    const apiKey = "$2a$10$6.w3P.QfhbFQnbnWjZrsg.wsBOO9azO3iyMntL.YxupxTXtjFchvy";
+    let mista = [];
 
-    // 1) Načti data jednou na startu
-    async function loadData() {
-      try {
-        const res  = await fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`, {
-          headers: { "X-Master-Key": apiKey }
-        });
-        if (!res.ok) throw new Error(res.status);
-        const json = await res.json();
-        // vždy boolean
-        mista = json.record.map(item => ({
-          ...item,
-          navstiveno: item.navstiveno === true || item.navstiveno === "true"
-        }));
-        render();
-      } catch (e) {
-        console.error("Load error:", e);
-        alert("Chyba při načítání dat.");
-      }
-    }
+    async function loadData() {
+      try {
+        const res  = await fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`, {
+          headers: { "X-Master-Key": apiKey }
+        });
+        if (!res.ok) throw new Error(res.status);
+        const json = await res.json();
+        mista = json.record.map(item => ({
+          ...item,
+          navstiveno: item.navstiveno === true || item.navstiveno === "true"
+        }));
+        render();
+      } catch (e) {
+        console.error("Load error:", e);
+        alert("Chyba při načítání dat.");
+      }
+    }
 
-    // 2) Vykresli obě sekce
-    function render() {
-      const nen = document.getElementById("nenavstiveno");
-      const nav = document.getElementById("navstiveno");
-      nen.innerHTML = "";
-      nav.innerHTML = "";
+    function render() {
+      const nen = document.getElementById("nenavstiveno");
+      const nav = document.getElementById("navstiveno");
+      nen.innerHTML = "";
+      nav.innerHTML = "";
 
-      mista.forEach((item, i) => {
-        const div = document.createElement("div");
-        div.className = "misto";
-        div.innerHTML = `
-          <h3>${item.misto}</h3>
-          <img src="${item.obrazek}" alt="${item.misto}">
-          <p><strong>Datum:</strong> ${item.datum}</p>
-          <p>${item.popis}</p>
-        `;
-        const btn = document.createElement("button");
-        btn.textContent = item.navstiveno
-          ? "Znovu na seznam"
-          : "Už jsem tu byl/a";
-        btn.addEventListener("click", () => toggleVisited(i));
-        div.appendChild(btn);
+      mista.forEach(item => {
+        const div = document.createElement("div");
+        div.className = "misto";
+        div.innerHTML = `
+          <h3>${item.misto}</h3>
+          <img src="${item.obrazek}" alt="${item.misto}">
+          <p><strong>Datum:</strong> ${item.datum}</p>
+          <p>${item.popis}</p>
+        `;
+        const btn = document.createElement("button");
+        btn.textContent = item.navstiveno
+          ? "Znovu na seznam"
+          : "Už jsem tu byl/a";
+        btn.addEventListener("click", () => toggleVisited(item.id));
+        div.appendChild(btn);
 
-        if (item.navstiveno) nav.appendChild(div);
-        else                nen.appendChild(div);
-      });
-    }
+        if (item.navstiveno) nav.appendChild(div);
+        else                nen.appendChild(div);
+      });
+    }
 
-    // 3) Uloží celý array do JSONBin
-    async function saveData() {
-      try {
-        const res = await fetch(`https://api.jsonbin.io/v3/b/${binId}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Master-Key": apiKey
-          },
-          body: JSON.stringify(mista)
-        });
-        if (!res.ok) throw new Error(res.status);
-      } catch (e) {
-        console.error("Save error:", e);
-        alert("Chyba při ukládání.");
-      }
-    }
+    async function saveData() {
+      try {
+        const res = await fetch(`https://api.jsonbin.io/v3/b/${binId}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Master-Key": apiKey
+          },
+          body: JSON.stringify(mista)
+        });
+        if (!res.ok) throw new Error(res.status);
+      } catch (e) {
+        console.error("Save error:", e);
+        alert("Chyba při ukládání.");
+      }
+    }
 
-    // 4) Přepíná stav a renderuje
-    async function toggleVisited(idx) {
-      mista[idx].navstiveno = !mista[idx].navstiveno;
-      await saveData();
-      render();
-    }
+    async function toggleVisited(id) {
+      const index = mista.findIndex(item => item.id === id);
+      if (index === -1) return;
+      mista[index].navstiveno = !mista[index].navstiveno;
+      await saveData();
+      render();
+    }
 
-    // 5) Formulář pro přidání
-    document.getElementById("formular")
-      .addEventListener("submit", async function(e) {
-        e.preventDefault();
-        const newPlace = {
-          misto:      this.misto.value.trim(),
-          datum:      this.datum.value,
-          popis:      this.popis.value.trim(),
-          obrazek:    this.obrazek.value.trim(),
-          navstiveno: this.navstiveno.checked
-        };
-        mista.push(newPlace);
-        await saveData();
-        this.reset();
-        render();
-      });
+    document.getElementById("formular")
+      .addEventListener("submit", async function(e) {
+        e.preventDefault();
+        const newPlace = {
+          id: Date.now(), // unikátní ID
+          misto:      this.misto.value.trim(),
+          datum:      this.datum.value,
+          popis:      this.popis.value.trim(),
+          obrazek:    this.obrazek.value.trim(),
+          navstiveno: this.navstiveno.checked
+        };
+        mista.push(newPlace);
+        await saveData();
+        this.reset();
+        render();
+      });
 
-    // start
-    loadData();
-  </script>
+    loadData();
+  </script>
 </body>
 </html>
