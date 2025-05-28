@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="cs">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Cestovatelský deník</title>
   <style>
     body {
@@ -12,40 +12,24 @@
       background: #f9f9f9;
     }
     h1, h2 { text-align: center; }
-    .sekce { margin: 30px 0; }
-    .misto {
-      background: #fff;
-      padding: 15px;
-      margin: 10px 0;
-      border-radius: 8px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    }
-    img {
-      max-width: 100%;
-      border-radius: 4px;
-      display: block;
-      margin: 10px 0;
-    }
-    form {
+    form, .misto {
       background: #fff;
       padding: 20px;
       border-radius: 8px;
       box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-      margin-bottom: 30px;
+      margin-bottom: 20px;
     }
     label { display: block; margin-bottom: 10px; }
     input[type="text"], input[type="date"], textarea {
-      width: 100%;
-      padding: 6px;
-      margin-top: 4px;
-      box-sizing: border-box;
+      width: 100%; padding: 6px; box-sizing: border-box;
+    }
+    .sekce { margin-top: 30px; }
+    .misto img {
+      max-width: 100%; border-radius: 4px; display: block; margin: 10px 0;
     }
     button {
-      background: #007acc;
-      color: #fff;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 4px;
+      background: #007acc; color: #fff;
+      border: none; padding: 8px 16px; border-radius: 4px;
       cursor: pointer;
     }
     button:hover { background: #005fa3; }
@@ -57,20 +41,16 @@
 
   <form id="formular">
     <h2>➕ Přidat nové místo</h2>
-    <label>
-      Název místa:
+    <label>Název místa:
       <input type="text" id="misto" required>
     </label>
-    <label>
-      Datum návštěvy:
+    <label>Datum návštěvy:
       <input type="date" id="datum" required>
     </label>
-    <label>
-      Popis:
+    <label>Popis:
       <textarea id="popis" rows="3" required></textarea>
     </label>
-    <label>
-      URL obrázku:
+    <label>URL obrázku:
       <input type="text" id="obrazek" placeholder="https://picsum.photos/300/200" required>
     </label>
     <label>
@@ -95,36 +75,34 @@
     const apiKey = "$2a$10$6.w3P.QfhbFQnbnWjZrsg.wsBOO9azO3iyMntL.YxupxTXtjFchvy";
     let mista = [];
 
-    // 1) Načtení a normalizace dat
+    // 1) Načti data jednou na startu
     async function loadData() {
       try {
         const res  = await fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`, {
           headers: { "X-Master-Key": apiKey }
         });
-        if (!res.ok) throw new Error(`Status ${res.status}`);
+        if (!res.ok) throw new Error(res.status);
         const json = await res.json();
-
-        // Převedeme navstiveno vždy na boolean
+        // vždy boolean
         mista = json.record.map(item => ({
           ...item,
           navstiveno: item.navstiveno === true || item.navstiveno === "true"
         }));
-
         render();
-      } catch (err) {
-        console.error("Chyba při načítání:", err);
-        alert("Nepodařilo se načíst data. Zkontroluj konzoli.");
+      } catch (e) {
+        console.error("Load error:", e);
+        alert("Chyba při načítání dat.");
       }
     }
 
-    // 2) Vykreslení obou sekcí
+    // 2) Vykresli obě sekce
     function render() {
       const nen = document.getElementById("nenavstiveno");
       const nav = document.getElementById("navstiveno");
       nen.innerHTML = "";
       nav.innerHTML = "";
 
-      mista.forEach((item, idx) => {
+      mista.forEach((item, i) => {
         const div = document.createElement("div");
         div.className = "misto";
         div.innerHTML = `
@@ -132,42 +110,20 @@
           <img src="${item.obrazek}" alt="${item.misto}">
           <p><strong>Datum:</strong> ${item.datum}</p>
           <p>${item.popis}</p>
-          <button data-index="${idx}">
-            ${item.navstiveno ? "Znovu na seznam" : "Už jsem tu byl/a"}
-          </button>
         `;
-        div.querySelector("button")
-           .addEventListener("click", () => toggleVisited(idx));
+        const btn = document.createElement("button");
+        btn.textContent = item.navstiveno
+          ? "Znovu na seznam"
+          : "Už jsem tu byl/a";
+        btn.addEventListener("click", () => toggleVisited(i));
+        div.appendChild(btn);
 
         if (item.navstiveno) nav.appendChild(div);
-        else              nen.appendChild(div);
+        else                nen.appendChild(div);
       });
     }
 
-    // 3) Přepnutí stavu a uložení
-    async function toggleVisited(i) {
-      mista[i].navstiveno = !mista[i].navstiveno;
-      await saveData();
-      await loadData();
-    }
-
-    // 4) Přidání nového místa
-    document.getElementById("formular").addEventListener("submit", async e => {
-      e.preventDefault();
-      const newPlace = {
-        misto:      e.target.misto.value.trim(),
-        datum:      e.target.datum.value,
-        popis:      e.target.popis.value.trim(),
-        obrazek:    e.target.obrazek.value.trim(),
-        navstiveno: e.target.navstiveno.checked
-      };
-      mista.push(newPlace);
-      await saveData();
-      e.target.reset();
-      await loadData();
-    });
-
-    // 5) Uložení do JSONBin
+    // 3) Uloží celý array do JSONBin
     async function saveData() {
       try {
         const res = await fetch(`https://api.jsonbin.io/v3/b/${binId}`, {
@@ -178,14 +134,38 @@
           },
           body: JSON.stringify(mista)
         });
-        if (!res.ok) throw new Error(`Status ${res.status}`);
-      } catch (err) {
-        console.error("Chyba při ukládání:", err);
-        alert("Nepodařilo se uložit změny. Zkontroluj konzoli.");
+        if (!res.ok) throw new Error(res.status);
+      } catch (e) {
+        console.error("Save error:", e);
+        alert("Chyba při ukládání.");
       }
     }
 
-    // Zahájení
+    // 4) Přepíná stav a renderuje
+    async function toggleVisited(idx) {
+      mista[idx].navstiveno = !mista[idx].navstiveno;
+      await saveData();
+      render();
+    }
+
+    // 5) Formulář pro přidání
+    document.getElementById("formular")
+      .addEventListener("submit", async function(e) {
+        e.preventDefault();
+        const newPlace = {
+          misto:      this.misto.value.trim(),
+          datum:      this.datum.value,
+          popis:      this.popis.value.trim(),
+          obrazek:    this.obrazek.value.trim(),
+          navstiveno: this.navstiveno.checked
+        };
+        mista.push(newPlace);
+        await saveData();
+        this.reset();
+        render();
+      });
+
+    // start
     loadData();
   </script>
 </body>
