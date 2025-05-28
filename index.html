@@ -4,22 +4,22 @@
   <meta charset="UTF-8" />
   <title>Můj cestovní bucketlist</title>
   <style>
-    body { font-family:sans-serif; max-width:800px; margin:40px auto; padding:20px; background:#f9f9f9; }
-    h1,h2 { text-align:center; }
-    .sekce { margin:30px 0; }
+    body { font-family: sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; background: #f9f9f9; }
+    h1, h2 { text-align: center; }
+    .sekce { margin: 30px 0; }
     .misto {
-      background:#fff; padding:15px; margin-bottom:15px;
-      border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.1);
+      background: #fff; padding: 15px; margin-bottom: 15px;
+      border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     }
-    img { max-width:100%; border-radius:4px; display:block; margin:10px 0; }
+    img { max-width: 100%; border-radius: 4px; display: block; margin: 10px 0; }
     button {
-      background:#007acc; color:#fff; border:none;
-      padding:8px 16px; border-radius:4px; cursor:pointer;
+      background: #007acc; color: #fff; border: none;
+      padding: 8px 16px; border-radius: 4px; cursor: pointer;
     }
-    button:hover { background:#005fa3; }
-    form { background:#fff; padding:20px; margin-bottom:30px; border-radius:8px; }
-    input, textarea { width:100%; margin-top:5px; margin-bottom:15px; padding:8px; box-sizing:border-box; }
-    label { display:block; font-weight: bold; }
+    button:hover { background: #005fa3; }
+    form { background: #fff; padding: 20px; margin-bottom: 30px; border-radius: 8px; }
+    input, textarea { width: 100%; margin-top: 5px; margin-bottom: 15px; padding: 8px; box-sizing: border-box; }
+    label { display: block; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -36,7 +36,7 @@
     <label>Popis:
       <textarea id="popis" required></textarea>
     </label>
-    <label>Obrázek (URL nebo použij např. https://picsum.photos/300/200):
+    <label>Obrázek (URL nebo např. https://picsum.photos/300/200):
       <input type="text" id="obrazek" required>
     </label>
     <label>
@@ -46,7 +46,7 @@
   </form>
 
   <div class="sekce">
-    <h2>🕓 Chci navštívit</h2>
+    <h2>🖓 Chci navštívit</h2>
     <div id="nenavstiveno"></div>
   </div>
 
@@ -103,7 +103,7 @@
     async function prepnout(index) {
       mista[index].navstiveno = !mista[index].navstiveno;
       try {
-        await fetch(`https://api.jsonbin.io/v3/b/${binId}`, {
+        const res = await fetch(`https://api.jsonbin.io/v3/b/${binId}`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
@@ -111,10 +111,12 @@
           },
           body: JSON.stringify(mista)
         });
+        const vysledek = await res.json();
+        console.log("Odpověď PUT:", vysledek);
         vykresli();
       } catch (err) {
         alert("Chyba při ukládání.");
-        console.error(err);
+        console.error("Chyba PUT:", err);
       }
     }
 
@@ -130,8 +132,9 @@
       };
 
       mista.push(noveMisto);
+
       try {
-        await fetch(`https://api.jsonbin.io/v3/b/${binId}`, {
+        const res = await fetch(`https://api.jsonbin.io/v3/b/${binId}`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
@@ -139,11 +142,14 @@
           },
           body: JSON.stringify(mista)
         });
+
+        const vysledek = await res.json();
+        console.log("Přidáno:", vysledek);
         this.reset();
         vykresli();
       } catch (err) {
-        alert("Chyba při ukládání.");
-        console.error(err);
+        alert("Chyba při ukládání nového místa.");
+        console.error("Chyba při submitu:", err);
       }
     });
 
