@@ -124,11 +124,12 @@
           <p><strong>Datum:</strong> ${misto.datum}</p>
           <p>${misto.popis}</p>
           <button onclick="prepnout(${misto.id})">
-            ${misto.navstiveno ? "Znovu na seznam" : "Už jsem tu byl!"}
+            ${misto.navstiveno === true || misto.navstiveno === "true" ? "Znovu na seznam" : "Už jsem tu byl!"}
           </button>
         `;
 
-        if (misto.navstiveno) {
+        // ❗ Tady je klíčová oprava
+        if (misto.navstiveno === true || misto.navstiveno === "true") {
           navstiveno.appendChild(div);
         } else {
           nenavstiveno.appendChild(div);
@@ -140,7 +141,8 @@
       const index = mista.findIndex(m => m.id === id);
       if (index === -1) return;
 
-      mista[index].navstiveno = !mista[index].navstiveno;
+      const current = mista[index].navstiveno;
+      mista[index].navstiveno = current === true || current === "true" ? false : true;
 
       try {
         await fetch(`https://api.jsonbin.io/v3/b/${binId}`, {
@@ -162,7 +164,7 @@
       e.preventDefault();
 
       const noveMisto = {
-        id: Date.now(), // unikátní ID
+        id: Date.now(),
         misto: document.getElementById("misto").value,
         datum: document.getElementById("datum").value,
         popis: document.getElementById("popis").value,
