@@ -1,158 +1,73 @@
 <!DOCTYPE html>
 <html lang="cs">
 <head>
-  <meta charset="UTF-8" />
-  <title>Cestovatelský deník (localStorage)</title>
+  <meta charset="UTF-8">
+  <title>Debug Cestovatelský deník</title>
   <style>
-    body {
-      font-family: sans-serif;
-      max-width: 800px;
-      margin: 40px auto;
-      padding: 20px;
-      background: #f9f9f9;
-    }
-    h1, h2 {
-      text-align: center;
-    }
-    form, .misto {
-      background: #fff;
-      padding: 20px;
-      margin-bottom: 20px;
-      border-radius: 8px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    }
-    label {
-      display: block;
-      margin-bottom: 10px;
-    }
-    input[type="text"],
-    input[type="date"],
-    textarea {
-      width: 100%;
-      padding: 8px;
-      margin-top: 4px;
-      box-sizing: border-box;
-    }
-    .sekce {
-      margin-top: 30px;
-    }
-    .misto img {
-      max-width: 100%;
-      display: block;
-      margin: 10px 0;
-      border-radius: 4px;
-    }
-    button {
-      background: #007acc;
-      color: #fff;
-      border: none;
-      padding: 10px 16px;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    button:hover {
-      background: #005fa3;
-    }
+    body { font-family:sans-serif; max-width:600px; margin:2em auto; background:#f9f9f9; padding:1em; }
+    .misto { background:#fff; padding:1em; margin-bottom:1em; border-radius:6px; }
+    button { margin-top:.5em; }
   </style>
 </head>
 <body>
-
-  <h1>🧭 Můj cestovatelský deník</h1>
-
-  <form id="form">
-    <h2>➕ Přidat nové místo</h2>
-    <label>
-      Název místa:
-      <input type="text" id="misto" required>
-    </label>
-    <label>
-      Datum návštěvy:
-      <input type="date" id="datum" required>
-    </label>
-    <label>
-      Popis:
-      <textarea id="popis" rows="3" required></textarea>
-    </label>
-    <label>
-      URL obrázku:
-      <input type="text" id="obrazek" placeholder="https://picsum.photos/300/200" required>
-    </label>
-    <label>
-      <input type="checkbox" id="navstiveno">
-      Už jsem tu byl/a
-    </label>
-    <button type="submit">Přidat místo</button>
-  </form>
-
+  <h1>🧭 Debug Deník</h1>
   <div class="sekce">
     <h2>🕓 Chci navštívit</h2>
     <div id="nenavstiveno"></div>
   </div>
-
   <div class="sekce">
     <h2>✅ Navštíveno</h2>
     <div id="navstiveno"></div>
   </div>
 
   <script>
-    // 0) Načti existující data nebo začni prázdným polem
+    console.log("–– SCRIPT START ––");
+
+    // 1) Načti data
     let mista = JSON.parse(localStorage.getItem('mista') || '[]');
+    console.log("Initial mista:", mista);
 
-    // 1) Funkce pro uložení do localStorage a render
-    function saveAndRender() {
-      localStorage.setItem('mista', JSON.stringify(mista));
-      render();
-    }
-
-    // 2) Vykreslení obou sekcí
+    // 2) Funkce vykreslí obě sekce a loguje stav
     function render() {
-      const nen = document.getElementById('nenavstiveno');
-      const nav = document.getElementById('navstiveno');
-      nen.innerHTML = '';
-      nav.innerHTML = '';
+      console.log("→ render() called, mista:", mista);
+      const nen = document.getElementById("nenavstiveno");
+      const nav = document.getElementById("navstiveno");
+      nen.innerHTML = ""; nav.innerHTML = "";
 
       mista.forEach((item, i) => {
-        const div = document.createElement('div');
-        div.className = 'misto';
+        const div = document.createElement("div");
+        div.className = "misto";
         div.innerHTML = `
-          <h3>${item.misto}</h3>
-          <img src="${item.obrazek}" alt="${item.misto}">
-          <p><strong>Datum:</strong> ${item.datum}</p>
-          <p>${item.popis}</p>
+          <strong>${item.misto}</strong> (${item.datum})<br>
+          navstiveno: ${item.navstiveno}
+          <br><button data-index="${i}">
+            ${item.navstiveno ? "Znovu na seznam" : "Už jsem tu byl/a"}
+          </button>
         `;
-        const btn = document.createElement('button');
-        btn.textContent = item.navstiveno
-          ? 'Znovu na seznam'
-          : 'Už jsem tu byl/a';
-        btn.addEventListener('click', () => {
+        const btn = div.querySelector("button");
+        btn.addEventListener("click", () => {
+          console.log("Button clicked on index", i);
           mista[i].navstiveno = !mista[i].navstiveno;
-          saveAndRender();
+          localStorage.setItem('mista', JSON.stringify(mista));
+          console.log("After toggle, mista:", mista);
+          render();
         });
-        div.appendChild(btn);
-
-        if (item.navstiveno) {
-          nav.appendChild(div);
-        } else {
-          nen.appendChild(div);
-        }
+        if (item.navstiveno) nav.appendChild(div);
+        else nen.appendChild(div);
       });
     }
 
-    // 3) Obsluha odeslání formuláře
-    document.getElementById('form').addEventListener('submit', function(e) {
-      e.preventDefault();
-      mista.push({
-        misto: document.getElementById('misto').value.trim(),
-        datum: document.getElementById('datum').value,
-        popis: document.getElementById('popis').value.trim(),
-        obrazek: document.getElementById('obrazek').value.trim(),
-        navstiveno: document.getElementById('navstiveno').checked
-      });
-      this.reset();
-      saveAndRender();
-    });
+    // 3) Pro test vložím pár ukázkových dat, pokud je storage prázdné
+    if (mista.length === 0) {
+      console.log("Storage prázdné – vkládám demo data");
+      mista = [
+        { misto:"Test A", datum:"2024-01-01", popis:"", obrazek:"", navstiveno:false },
+        { misto:"Test B", datum:"2024-02-02", popis:"", obrazek:"", navstiveno:true }
+      ];
+      localStorage.setItem('mista', JSON.stringify(mista));
+    }
 
-    // 4) První vykreslení
+    // 4) Vykresli při startu
     render();
   </script>
 </body>
