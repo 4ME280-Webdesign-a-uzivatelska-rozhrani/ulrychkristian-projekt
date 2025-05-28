@@ -3,43 +3,107 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Můj cestovatelský deník</title>
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <title>Interaktivní cestovatelský deník</title>
   <style>
     body {
       font-family: sans-serif;
       max-width: 800px;
       margin: auto;
       padding: 1rem;
-      line-height: 1.6;
       background-color: #f9f9f9;
+    }
+    .destination {
+      background: #fff;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
     img {
       max-width: 100%;
-      height: auto;
       border-radius: 8px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-      margin: 1rem 0;
+      margin: 0.5rem 0;
     }
-    h1 {
-      text-align: center;
-      color: #333;
+    textarea {
+      width: 100%;
+      height: 80px;
+      margin-top: 0.5rem;
+      font-family: sans-serif;
+    }
+    button {
+      margin-top: 0.5rem;
+      padding: 0.5rem 1rem;
+      border: none;
+      background-color: #0077cc;
+      color: white;
+      border-radius: 4px;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
-  <h1>Můj cestovatelský deník</h1>
-  <div id="content">Načítám...</div>
+  <h1>Interaktivní cestovatelský deník</h1>
+  <div id="diary"></div>
 
   <script>
-    fetch("https://raw.githubusercontent.com/4ME280-Webdesign-a-uzivatelska-rozhrani/ulrychkristian-projekt/main/travel_log.md")
-      .then(response => response.text())
-      .then(text => {
-        document.getElementById("content").innerHTML = marked.parse(text);
+    const BIN_ID = "6836e9068960c979a5a21f76";
+    const MASTER_KEY = "$2a$10$6.w3P.QfhbFQnbnWjZrsg.wsBOO9azO3iyMntL.YxupxTXtjFchvy";
+    const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+
+    // Načti data z JSONBin
+    fetch(API_URL, {
+      headers: { "X-Master-Key": MASTER_KEY }
+    })
+      .then(res => res.json())
+      .then(data => {
+        const entries = data.record;
+        const container = document.getElementById("diary");
+
+        entries.forEach((entry, index) => {
+          const div = document.createElement("div");
+          div.className = "destination";
+
+          div.innerHTML = `
+            <h2>${entry.mesto}</h2>
+            <p><strong>Datum:</strong> ${entry.datum}</p>
+            <p><strong>Místa:</strong> ${entry.lokace}</p>
+            <p><strong>Popis:</strong> ${entry.popis}</p>
+            <img src="${entry.obrazek}" alt="${entry.mesto}" />
+            <label for="zaznam-${index}">Zápis / komentář:</label>
+            <textarea id="zaznam-${index}">${entry.zaznam || ""}</textarea>
+            <button onclick="ulozitZaznam(${index})">💾 Uložit</button>
+          `;
+
+          container.appendChild(div);
+        });
+
+        // Uložení změn
+        window.ulozitZaznam = function(index) {
+          const textarea = document.getElementById(`zaznam-${index}`);
+          entries[index].zaznam = textarea.value;
+
+          fetch(API_URL, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Master-Key": MASTER_KEY,
+              "X-Bin-Name": "Travel Diary"
+            },
+            body: JSON.stringify(entries)
+          })
+          .then(res => res.json())
+          .then(() => {
+            alert("Záznam uložen.");
+          })
+          .catch(err => {
+            console.error(err);
+            alert("Chyba při ukládání.");
+          });
+        };
       })
-      .catch(error => {
-        document.getElementById("content").innerText = "Nepodařilo se načíst data.";
-        console.error(error);
+      .catch(err => {
+        console.error(err);
+        document.getElementById("diary").innerText = "Nepodařilo se načíst deník.";
       });
   </script>
 </body>
