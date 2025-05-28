@@ -3,11 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Interaktivní cestovatelský deník</title>
+  <title>Interaktivní cestovatelský deník s mapou</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <style>
     body {
       font-family: sans-serif;
-      max-width: 800px;
+      max-width: 900px;
       margin: auto;
       padding: 1rem;
       background-color: #f9f9f9;
@@ -38,12 +39,20 @@
       border-radius: 4px;
       cursor: pointer;
     }
+    #map {
+      height: 400px;
+      margin: 1rem 0;
+      border-radius: 8px;
+    }
   </style>
 </head>
 <body>
   <h1>Interaktivní cestovatelský deník</h1>
 
-  <!-- Nový formulář -->
+  <!-- Mapa -->
+  <div id="map"></div>
+
+  <!-- Formulář -->
   <div class="new-location">
     <h2>➕ Přidat novou lokaci</h2>
     <input type="text" id="new-mesto" placeholder="Město" required />
@@ -55,18 +64,27 @@
     <button onclick="pridatNovouLokaci()">💾 Přidat lokaci</button>
   </div>
 
-  <!-- Výpis destinací -->
+  <!-- Výpis -->
   <div id="diary"></div>
 
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
     const BIN_ID = "6836e9068960c979a5a21f76";
     const MASTER_KEY = "$2a$10$6.w3P.QfhbFQnbnWjZrsg.wsBOO9azO3iyMntL.YxupxTXtjFchvy";
     const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
     let entries = [];
 
+    // Inicializace mapy
+    const map = L.map('map').setView([48.8566, 2.3522], 4); // Evropa
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap',
+      maxZoom: 18
+    }).addTo(map);
+
     function zobrazDenik() {
       const container = document.getElementById("diary");
-      container.innerHTML = ""; // smaž předchozí
+      container.innerHTML = "";
 
       entries.forEach((entry, index) => {
         const div = document.createElement("div");
@@ -83,10 +101,16 @@
           <button onclick="ulozitZaznam(${index})">💾 Uložit</button>
         `;
         container.appendChild(div);
+
+        // Přidání markeru na mapu
+        if (entry.lat && entry.lng) {
+          L.marker([entry.lat, entry.lng]).addTo(map)
+            .bindPopup(`<strong>${entry.mesto}</strong><br>${entry.lokace}`);
+        }
       });
     }
 
-    // Načtení deníku
+    // Načtení dat
     fetch(API_URL, {
       headers: { "X-Master-Key": MASTER_KEY }
     })
@@ -120,41 +144,56 @@
       });
     }
 
-    // Přidání nové lokace
+    // Přidání nové lokace s automatickým geokódováním
     function pridatNovouLokaci() {
-      const nova = {
-        mesto: document.getElementById("new-mesto").value,
-        datum: document.getElementById("new-datum").value,
-        lokace: document.getElementById("new-lokace").value,
-        popis: document.getElementById("new-popis").value,
-        obrazek: document.getElementById("new-obrazek").value,
-        zaznam: document.getElementById("new-zaznam").value
-      };
+      const mesto = document.getElementById("new-mesto").value;
+      const datum = document.getElementById("new-datum").value;
+      const lokace = document.getElementById("new-lokace").value;
+      const popis = document.getElementById("new-popis").value;
+      const obrazek = document.getElementById("new-obrazek").value;
+      const zaznam = document.getElementById("new-zaznam").value;
 
-      if (!nova.mesto || !nova.datum || !nova.lokace || !nova.popis || !nova.obrazek) {
-        alert("Vyplň prosím všechna povinná pole.");
+      if (!mesto || !datum || !lokace || !popis || !obrazek) {
+        alert("Vyplň všechna povinná pole.");
         return;
       }
 
-      entries.push(nova); // přidej do pole
+      const query = encodeURIComponent(mesto);
+      fetch(`https://nominatim.openstreetmap.org/search?q=${query}&format=json`)
+        .then(res => res.json())
+        .then(results => {
+          if (!results.length) {
+            alert("Místo nenalezeno.");
+            return;
+          }
 
-      // Ulož zpět do JSONBin
-      fetch(API_URL, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Master-Key": MASTER_KEY
-        },
-        body: JSON.stringify(entries)
-      })
-      .then(() => {
-        alert("Nová lokalita byla přidána.");
-        zobrazDenik(); // aktualizuj výpis
-      })
-      .catch(err => {
-        console.error(err);
-        alert("Chyba při ukládání nové lokace.");
-      });
+          const { lat, lon } = results[0];
+
+          const nova = {
+            mesto, datum, lokace, popis, obrazek, zaznam,
+            lat: parseFloat(lat),
+            lng: parseFloat(lon)
+          };
+
+          entries.push(nova);
+
+          return fetch(API_URL, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Master-Key": MASTER_KEY
+            },
+            body: JSON.stringify(entries)
+          });
+        })
+        .then(() => {
+          alert("Nová lokalita byla přidána.");
+          zobrazDenik();
+        })
+        .catch(err => {
+          console.error(err);
+          alert("Chyba při ukládání nebo geokódování.");
+        });
     }
   </script>
 </body>
