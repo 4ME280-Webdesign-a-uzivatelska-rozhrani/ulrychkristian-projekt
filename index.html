@@ -2,158 +2,45 @@
 <html lang="cs">
 <head>
   <meta charset="UTF-8" />
-  <title>Můj cestovní bucketlist</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Můj cestovatelský deník</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
-    body { font-family: sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; background: #f9f9f9; }
-    h1, h2 { text-align: center; }
-    .sekce { margin: 30px 0; }
-    .misto {
-      background: #fff; padding: 15px; margin-bottom: 15px;
-      border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    body {
+      font-family: sans-serif;
+      max-width: 800px;
+      margin: auto;
+      padding: 1rem;
+      line-height: 1.6;
+      background-color: #f9f9f9;
     }
-    img { max-width: 100%; border-radius: 4px; display: block; margin: 10px 0; }
-    button {
-      background: #007acc; color: #fff; border: none;
-      padding: 8px 16px; border-radius: 4px; cursor: pointer;
+    img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      margin: 1rem 0;
     }
-    button:hover { background: #005fa3; }
-    form { background: #fff; padding: 20px; margin-bottom: 30px; border-radius: 8px; }
-    input, textarea { width: 100%; margin-top: 5px; margin-bottom: 15px; padding: 8px; box-sizing: border-box; }
-    label { display: block; font-weight: bold; }
+    h1 {
+      text-align: center;
+      color: #333;
+    }
   </style>
 </head>
 <body>
-  <h1>🧭 Můj cestovní bucketlist</h1>
-
-  <form id="formular">
-    <h2>➕ Přidat nové místo</h2>
-    <label>Název místa:
-      <input type="text" id="misto" required>
-    </label>
-    <label>Datum:
-      <input type="date" id="datum" required>
-    </label>
-    <label>Popis:
-      <textarea id="popis" required></textarea>
-    </label>
-    <label>Obrázek (URL nebo např. https://picsum.photos/300/200):
-      <input type="text" id="obrazek" required>
-    </label>
-    <label>
-      <input type="checkbox" id="navstiveno"> Už jsem to místo navštívil
-    </label>
-    <button type="submit">Přidat místo</button>
-  </form>
-
-  <div class="sekce">
-    <h2>🕓 Chci navštívit</h2>
-    <div id="nenavstiveno"></div>
-  </div>
-
-  <div class="sekce">
-    <h2>✅ Navštíveno</h2>
-    <div id="navstiveno"></div>
-  </div>
+  <h1>Můj cestovatelský deník</h1>
+  <div id="content">Načítám...</div>
 
   <script>
-    const binId = "6836e3458a456b7966a66133";
-    const apiKey = "$2a$10$6.w3P.QfhbFQnbnWjZrsg.wsBOO9azO3iyMntL.YxupxTXtjFchvy";
-    let mista = [];
-
-    async function nactiData() {
-      try {
-        const res = await fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`, {
-          headers: { "X-Master-Key": apiKey }
-        });
-        const data = await res.json();
-        mista = data.record;
-        vykresli();
-      } catch (err) {
-        alert("Chyba při načítání dat.");
-        console.error(err);
-      }
-    }
-
-    function vykresli() {
-      const nen = document.getElementById("nenavstiveno");
-      const nav = document.getElementById("navstiveno");
-      nen.innerHTML = "";
-      nav.innerHTML = "";
-
-      mista.forEach((misto, index) => {
-        const div = document.createElement("div");
-        div.className = "misto";
-        div.innerHTML = `
-          <h3>${misto.misto}</h3>
-          <img src="${misto.obrazek}" alt="${misto.misto}">
-          <p><strong>Datum:</strong> ${misto.datum}</p>
-          <p>${misto.popis}</p>
-          <button onclick="prepnout(${index})">
-            ${misto.navstiveno ? "Zpět na seznam" : "Už jsem tu byl"}
-          </button>
-        `;
-        if (misto.navstiveno) {
-          nav.appendChild(div);
-        } else {
-          nen.appendChild(div);
-        }
+    fetch("https://raw.githubusercontent.com/4ME280-Webdesign-a-uzivatelska-rozhrani/ulrychkristian-projekt/main/travel_log.md")
+      .then(response => response.text())
+      .then(text => {
+        document.getElementById("content").innerHTML = marked.parse(text);
+      })
+      .catch(error => {
+        document.getElementById("content").innerText = "Nepodařilo se načíst data.";
+        console.error(error);
       });
-    }
-
-    async function prepnout(index) {
-      mista[index].navstiveno = !mista[index].navstiveno;
-      try {
-        const res = await fetch(`https://api.jsonbin.io/v3/b/${binId}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Master-Key": apiKey
-          },
-          body: JSON.stringify(mista)
-        });
-        const vysledek = await res.json();
-        console.log("Odpověď PUT:", vysledek);
-        vykresli();
-      } catch (err) {
-        alert("Chyba při ukládání.");
-        console.error("Chyba PUT:", err);
-      }
-    }
-
-    document.getElementById("formular").addEventListener("submit", async function (e) {
-      e.preventDefault();
-
-      const noveMisto = {
-        misto: document.getElementById("misto").value.trim(),
-        datum: document.getElementById("datum").value,
-        popis: document.getElementById("popis").value.trim(),
-        obrazek: document.getElementById("obrazek").value.trim(),
-        navstiveno: document.getElementById("navstiveno").checked
-      };
-
-      mista.push(noveMisto);
-
-      try {
-        const res = await fetch(`https://api.jsonbin.io/v3/b/${binId}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Master-Key": apiKey
-          },
-          body: JSON.stringify(mista)
-        });
-
-        const vysledek = await res.json();
-        console.log("Přidáno:", vysledek);
-        this.reset();
-        vykresli();
-      } catch (err) {
-        alert("Chyba při ukládání nového místa.");
-        console.error("Chyba při submitu:", err);
-      }
-    });
-
-    nactiData();
   </script>
 </body>
 </html>
