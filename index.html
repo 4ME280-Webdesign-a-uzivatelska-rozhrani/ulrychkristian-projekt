@@ -3,68 +3,34 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Interaktivní cestovatelský deník s mapou</title>
+  <title>Cestovatelský deník s mapou, úpravy a mazáním</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <style>
-    body {
-      font-family: sans-serif;
-      max-width: 900px;
-      margin: auto;
-      padding: 1rem;
-      background-color: #f9f9f9;
-    }
-    .destination, .new-location {
-      background: #fff;
-      padding: 1rem;
-      margin-bottom: 1rem;
-      border-radius: 8px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-    img {
-      max-width: 100%;
-      border-radius: 8px;
-      margin: 0.5rem 0;
-    }
-    textarea, input {
-      width: 100%;
-      margin: 0.3rem 0;
-      padding: 0.4rem;
-    }
-    button {
-      margin-top: 0.5rem;
-      padding: 0.5rem 1rem;
-      border: none;
-      background-color: #0077cc;
-      color: white;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    #map {
-      height: 400px;
-      margin: 1rem 0;
-      border-radius: 8px;
-    }
+    body { font-family: sans-serif; max-width: 900px; margin: auto; padding: 1rem; background-color: #f9f9f9; }
+    .destination, .new-location { background: #fff; padding: 1rem; margin-bottom: 1rem; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    img { max-width: 100%; border-radius: 8px; margin: 0.5rem 0; }
+    textarea, input { width: 100%; margin: 0.3rem 0; padding: 0.4rem; }
+    button { margin-top: 0.5rem; padding: 0.5rem 1rem; border: none; background-color: #0077cc; color: white; border-radius: 4px; cursor: pointer; }
+    #map { height: 400px; margin: 1rem 0; border-radius: 8px; }
+    .planned { opacity: 0.6; }
   </style>
 </head>
 <body>
-  <h1>Interaktivní cestovatelský deník</h1>
-
-  <!-- Mapa -->
+  <h1>Cestovatelský deník</h1>
   <div id="map"></div>
 
-  <!-- Formulář -->
   <div class="new-location">
-    <h2>➕ Přidat novou lokaci</h2>
+    <h2>➕ Nová lokalita</h2>
     <input type="text" id="new-mesto" placeholder="Město" required />
     <input type="date" id="new-datum" required />
     <input type="text" id="new-lokace" placeholder="Navštívená místa" required />
     <textarea id="new-popis" placeholder="Popis cesty" required></textarea>
     <input type="url" id="new-obrazek" placeholder="URL obrázku" required />
     <textarea id="new-zaznam" placeholder="Zápis/komentář (nepovinné)"></textarea>
+    <label><input type="checkbox" id="new-navstiveno"> Navštíveno</label>
     <button onclick="pridatNovouLokaci()">💾 Přidat lokaci</button>
   </div>
 
-  <!-- Výpis -->
   <div id="diary"></div>
 
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
@@ -74,9 +40,7 @@
     const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
     let entries = [];
 
-    // Inicializace mapy
-    const map = L.map('map').setView([48.8566, 2.3522], 4); // Evropa
-
+    const map = L.map('map').setView([48.8566, 2.3522], 4);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap',
       maxZoom: 18
@@ -85,50 +49,68 @@
     function zobrazDenik() {
       const container = document.getElementById("diary");
       container.innerHTML = "";
+      map.eachLayer(layer => { if (layer instanceof L.Marker) map.removeLayer(layer); });
 
       entries.forEach((entry, index) => {
         const div = document.createElement("div");
-        div.className = "destination";
+        div.className = "destination" + (!entry.navstiveno ? " planned" : "");
 
-        div.innerHTML = `
-          <h2>${entry.mesto}</h2>
-          <p><strong>Datum:</strong> ${entry.datum}</p>
-          <p><strong>Místa:</strong> ${entry.lokace}</p>
-          <p><strong>Popis:</strong> ${entry.popis}</p>
-          <img src="${entry.obrazek}" alt="${entry.mesto}" />
-          <label for="zaznam-${index}">Zápis / komentář:</label>
-          <textarea id="zaznam-${index}">${entry.zaznam || ""}</textarea>
-          <button onclick="ulozitZaznam(${index})">💾 Uložit</button>
-        `;
-        container.appendChild(div);
-
-        // Přidání markeru na mapu
-        if (entry.lat && entry.lng) {
-          L.marker([entry.lat, entry.lng]).addTo(map)
-            .bindPopup(`<strong>${entry.mesto}</strong><br>${entry.lokace}`);
+        if (entry.editing) {
+          div.innerHTML = `
+            <input type="text" value="${entry.mesto}" onchange="entries[${index}].mesto = this.value" />
+            <input type="date" value="${entry.datum}" onchange="entries[${index}].datum = this.value" />
+            <input type="text" value="${entry.lokace}" onchange="entries[${index}].lokace = this.value" />
+            <textarea onchange="entries[${index}].popis = this.value">${entry.popis}</textarea>
+            <input type="url" value="${entry.obrazek}" onchange="entries[${index}].obrazek = this.value" />
+            <textarea onchange="entries[${index}].zaznam = this.value">${entry.zaznam || ""}</textarea>
+            <label><input type="checkbox" ${entry.navstiveno ? 'checked' : ''} onchange="entries[${index}].navstiveno = this.checked"> Navštíveno</label>
+            <button onclick="ulozitZmenu(${index})">💾 Uložit změny</button>
+            <button onclick="zrusitEditaci(${index})">Zrušit</button>
+          `;
+        } else {
+          div.innerHTML = `
+            <h2>${entry.mesto} ${entry.navstiveno ? '[NAVŠTÍVENO]' : '[PLÁNUJI]'}</h2>
+            <p><strong>Datum:</strong> ${entry.datum}</p>
+            <p><strong>Místa:</strong> ${entry.lokace}</p>
+            <p><strong>Popis:</strong> ${entry.popis}</p>
+            <img src="${entry.obrazek}" alt="${entry.mesto}" />
+            <p><strong>Záznam:</strong> ${entry.zaznam || "---"}</p>
+            <button onclick="editovat(${index})">✏️ Upravit</button>
+            <button onclick="smazat(${index})">🗑️ Smazat</button>
+          `;
+          if (entry.lat && entry.lng) {
+            L.marker([entry.lat, entry.lng]).addTo(map)
+              .bindPopup(`<strong>${entry.mesto}</strong><br>${entry.lokace}`);
+          }
         }
+
+        container.appendChild(div);
       });
     }
 
-    // Načtení dat
-    fetch(API_URL, {
-      headers: { "X-Master-Key": MASTER_KEY }
-    })
-      .then(res => res.json())
-      .then(data => {
-        entries = data.record;
-        zobrazDenik();
-      })
-      .catch(err => {
-        console.error(err);
-        document.getElementById("diary").innerText = "Nepodařilo se načíst deník.";
-      });
+    function ulozitZmenu(index) {
+      entries[index].editing = false;
+      ulozDoBin();
+    }
 
-    // Uložení záznamu
-    function ulozitZaznam(index) {
-      const textarea = document.getElementById(`zaznam-${index}`);
-      entries[index].zaznam = textarea.value;
+    function zrusitEditaci(index) {
+      entries[index].editing = false;
+      zobrazDenik();
+    }
 
+    function editovat(index) {
+      entries[index].editing = true;
+      zobrazDenik();
+    }
+
+    function smazat(index) {
+      if (confirm("Opravdu chcete smazat tuto lokaci?")) {
+        entries.splice(index, 1);
+        ulozDoBin();
+      }
+    }
+
+    function ulozDoBin() {
       fetch(API_URL, {
         method: "PUT",
         headers: {
@@ -136,15 +118,11 @@
           "X-Master-Key": MASTER_KEY
         },
         body: JSON.stringify(entries)
-      })
-      .then(() => alert("Záznam uložen."))
-      .catch(err => {
-        console.error(err);
-        alert("Chyba při ukládání.");
-      });
+      }).then(() => {
+        zobrazDenik();
+      }).catch(err => alert("Chyba při ukládání."));
     }
 
-    // Přidání nové lokace s automatickým geokódováním
     function pridatNovouLokaci() {
       const mesto = document.getElementById("new-mesto").value;
       const datum = document.getElementById("new-datum").value;
@@ -152,6 +130,7 @@
       const popis = document.getElementById("new-popis").value;
       const obrazek = document.getElementById("new-obrazek").value;
       const zaznam = document.getElementById("new-zaznam").value;
+      const navstiveno = document.getElementById("new-navstiveno").checked;
 
       if (!mesto || !datum || !lokace || !popis || !obrazek) {
         alert("Vyplň všechna povinná pole.");
@@ -168,33 +147,23 @@
           }
 
           const { lat, lon } = results[0];
-
-          const nova = {
-            mesto, datum, lokace, popis, obrazek, zaznam,
-            lat: parseFloat(lat),
-            lng: parseFloat(lon)
-          };
-
+          const nova = { mesto, datum, lokace, popis, obrazek, zaznam, navstiveno, lat: parseFloat(lat), lng: parseFloat(lon) };
           entries.push(nova);
-
-          return fetch(API_URL, {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-              "X-Master-Key": MASTER_KEY
-            },
-            body: JSON.stringify(entries)
-          });
-        })
-        .then(() => {
-          alert("Nová lokalita byla přidána.");
-          zobrazDenik();
+          ulozDoBin();
         })
         .catch(err => {
           console.error(err);
-          alert("Chyba při ukládání nebo geokódování.");
+          alert("Chyba při geokódování.");
         });
     }
+
+    fetch(API_URL, { headers: { "X-Master-Key": MASTER_KEY } })
+      .then(res => res.json())
+      .then(data => {
+        entries = data.record.map(e => ({ ...e, editing: false }));
+        zobrazDenik();
+      })
+      .catch(err => console.error(err));
   </script>
 </body>
 </html>
