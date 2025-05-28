@@ -8,13 +8,16 @@
   <style>
     body { font-family: sans-serif; max-width: 900px; margin: auto; padding: 1rem; background-color: #f9f9f9; }
     .destination, .new-location { background: #fff; padding: 1rem; margin-bottom: 1rem; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-    img { max-width: 100%; border-radius: 8px; margin: 0.5rem 0; }
+    img { max-width: 100%; border-radius: 8px; margin: 0.5rem 0; cursor: pointer; }
     textarea, input, select { width: 100%; margin: 0.3rem 0; padding: 0.4rem; }
     button { margin-top: 0.5rem; padding: 0.5rem 1rem; border: none; background-color: #0077cc; color: white; border-radius: 4px; cursor: pointer; }
     #map { height: 400px; margin: 1rem 0; border-radius: 8px; }
     .planned { opacity: 0.6; }
     .section { margin-bottom: 2rem; }
     .section h2 { border-bottom: 2px solid #ccc; padding-bottom: 0.3rem; }
+    #imageModal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); justify-content: center; align-items: center; }
+    #imageModal img { max-width: 90%; max-height: 90%; border-radius: 8px; }
+    #imageModal span { position: absolute; top: 20px; right: 40px; font-size: 40px; color: white; cursor: pointer; }
   </style>
 </head>
 <body>
@@ -41,6 +44,13 @@
 
     <label for="search-filter"><strong>Vyhledat:</strong></label>
     <input type="text" id="search-filter" placeholder="Hledat v městě, popisu nebo poznámce" oninput="zobrazDenik()" />
+
+    <label for="sort-filter"><strong>Seřadit podle:</strong></label>
+    <select id="sort-filter" onchange="zobrazDenik()">
+      <option value="novy">Od nejnovějších</option>
+      <option value="stary">Od nejstarších</option>
+      <option value="abeceda">Abecedně</option>
+    </select>
   </div>
 
   <div class="section">
@@ -51,6 +61,11 @@
   <div class="section">
     <h2>📍 Plánované lokace</h2>
     <div id="planned"></div>
+  </div>
+
+  <div id="imageModal" onclick="this.style.display='none'">
+    <span onclick="document.getElementById('imageModal').style.display='none'">&times;</span>
+    <img id="modalImage" src="" alt="Zvětšený obrázek" />
   </div>
 
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
@@ -71,20 +86,30 @@
       const plannedContainer = document.getElementById("planned");
       const selectedYear = document.getElementById("rok-filter").value;
       const searchQuery = document.getElementById("search-filter")?.value?.toLowerCase() || "";
+      const sortOption = document.getElementById("sort-filter")?.value || "novy";
 
       visitedContainer.innerHTML = "";
       plannedContainer.innerHTML = "";
       map.eachLayer(layer => { if (layer instanceof L.Marker) map.removeLayer(layer); });
 
-      entries.forEach((entry, index) => {
+      let filtered = entries.filter(entry => {
         const entryYear = entry.datum?.substring(0, 4);
-        if (selectedYear && selectedYear !== entryYear) return;
-
+        if (selectedYear && selectedYear !== entryYear) return false;
         if (
           searchQuery &&
           ![entry.mesto, entry.popis, entry.zaznam].some(field => field?.toLowerCase().includes(searchQuery))
-        ) return;
+        ) return false;
+        return true;
+      });
 
+      filtered.sort((a, b) => {
+        if (sortOption === "novy") return new Date(b.datum) - new Date(a.datum);
+        if (sortOption === "stary") return new Date(a.datum) - new Date(b.datum);
+        if (sortOption === "abeceda") return a.mesto.localeCompare(b.mesto);
+        return 0;
+      });
+
+      filtered.forEach((entry, index) => {
         const div = document.createElement("div");
         div.className = "destination" + (!entry.navstiveno ? " planned" : "");
 
@@ -96,7 +121,7 @@
             <textarea onchange="entries[${index}].popis = this.value">${entry.popis}</textarea>
             <input type="url" value="${entry.obrazek}" onchange="entries[${index}].obrazek = this.value" />
             <textarea onchange="entries[${index}].zaznam = this.value">${entry.zaznam || ""}</textarea>
-            <label><input type="checkbox" ${entry.navstiveno ? 'checked' : ''} onchange="entries[${index}].navstiveno = this.checked; ulozDoBin();"> Navštíveno</label>
+            <label><input type="checkbox" ${entry.navstiveno ? 'checked' : ''} onchange="entries[${index}].navstiveno = this.checked"> Navštíveno</label>
             <button onclick="ulozitZmenu(${index})">💾 Uložit změny</button>
             <button onclick="zrusitEditaci(${index})">Zrušit</button>
           `;
@@ -106,7 +131,7 @@
             <p><strong>Datum:</strong> ${entry.datum}</p>
             <p><strong>Místa:</strong> ${entry.lokace}</p>
             <p><strong>Popis:</strong> ${entry.popis}</p>
-            <img src="${entry.obrazek}" alt="${entry.mesto}" />
+            <img src="${entry.obrazek}" alt="${entry.mesto}" onclick="zobrazObrazek('${entry.obrazek}')" />
             <p><strong>Záznam:</strong> ${entry.zaznam || "---"}</p>
             <button onclick="editovat(${index})">✏️ Upravit</button>
             <button onclick="smazat(${index})">🗑️ Smazat</button>
@@ -119,6 +144,11 @@
 
         (entry.navstiveno ? visitedContainer : plannedContainer).appendChild(div);
       });
+    }
+
+    function zobrazObrazek(src) {
+      document.getElementById("modalImage").src = src;
+      document.getElementById("imageModal").style.display = "flex";
     }
 
     function naplnitRoky() {
