@@ -84,21 +84,26 @@
 
     // 1) Načte data, převede navstiveno na boolean a vykreslí
     async function nactiData() {
-      try {
-        const res = await fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`, {
-          headers: { "X-Master-Key": apiKey }
-        });
-        const json = await res.json();
-        mista = json.record.map(m => ({
-          ...m,
-          navstiveno: m.navstiveno === true || m.navstiveno === "true"
-        }));
-        vykresli();
-      } catch (e) {
-        alert("Chyba při načítání dat.");
-        console.error(e);
-      }
-    }
+  try {
+    const res = await fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`, {
+      headers: { "X-Master-Key": apiKey }
+    });
+    console.log("Fetch status:", res.status);
+    const json = await res.json();
+    console.log("Raw data.record:", json.record);
+
+    mista = json.record.map(m => ({
+      ...m,
+      navstiveno: m.navstiveno === true || m.navstiveno === "true"
+    }));
+    console.log("Normalized mista:", mista);
+
+    vykresli();
+  } catch (e) {
+    console.error("Chyba v nactiData():", e);
+    alert("Chyba při načítání dat – koukni do konzole.");
+  }
+}
 
     // 2) Vykreslí obě sekce podle boolean navstiveno
     function vykresli() {
